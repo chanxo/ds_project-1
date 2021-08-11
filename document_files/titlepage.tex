@@ -1,0 +1,36 @@
+%! Author = domore
+%! Date = 8/11/21
+
+\documentclass{amsart}
+\usepackage[margin=1in]{geometry}
+\usepackage{afterpage}
+\usepackage{tikz}
+\usetikzlibrary{fadings}
+
+\begin{document}
+
+\DeclareFixedFont{\titlefont}{T1}{ppl}{b}{}{0.7in}
+\DeclareFixedFont{\subtitlefont}{T1}{ppl}{b}{}{0.4in}
+\afterpage{\restoregeometry}
+\newgeometry{left=1in, right=1in,top=1in, bottom=0in}
+\definecolor{mytan}{HTML}{FF6200}
+\pagecolor{mytan}\afterpage{\nopagecolor}
+
+\thispagestyle{empty}
+\begin{flushright}
+\titlefont Data Science Project\\
+\subtitlefont Francisco Prado, Vienna 2021
+\end{flushright}
+%\vfill
+\begin{center}
+\begin{tikzpicture}
+\node[scope fading=north, inner sep=0pt, outer sep=0pt]{
+ \makebox[\textwidth]{\includegraphics[width=\paperwidth]{figs/mill_amsterdam.jpg}}
+};
+\end{tikzpicture}
+\end{center}
+
+% for additional pages after the title, uncomment the following line first:
+% \clearpage
+
+\end{document}
