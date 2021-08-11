@@ -1,2 +1,2 @@
-# ds_project-1
-Data Science small projects, showcasing different models, approaches.
+# Data Science project-1
+Data Science small projects. Showcasing different models, approaches.
