@@ -9,15 +9,44 @@
 \usepackage{graphicx}
 \usepackage{cleveref}
 \usepackage[margin=1.1in]{geometry}
+\usepackage{python}
+\usepackage{pythontex}
+%pdflatex -aux-directory=/home/domore/PycharmProjects/ds_project-1/document_files/aux -output-directory=/home/domore/PycharmProjects/ds_project-1 main_document.tex
+%python document_files/pythontex/pythontex3.py document_files/main_document.tex
+%pdflatex -aux-directory=/home/domore/PycharmProjects/ds_project-1/document_files/aux -output-directory=/home/domore/PycharmProjects/ds_project-1 main_document.tex
+\usepackage[framemethod=TikZ]{mdframed}
+
+% for future projects
+% \usepackage[usefamily=juliacon]{pythontex}
 
 % Document
 \begin{document}
 
 \part[wine]{Project 1: Wine Quality}
 
+
+\begin{pyconsole}[][frame=single]
+import pandas as pd
+import os
+
+# Referencing folders and data names
+path = os.getcwd()
+# We have to re-structure the path since we are in LaTeX
+path = os.path.abspath(os.path.join(path, os.pardir))
+file_name = 'winequality-red.csv'
+path_file = f'{path}/code_python/project1_wine/data/{file_name}'
+# We load the data and present an overview
+wine_data = pd.read_csv(path_file)
+wine_data.info()
+\end{pyconsole}
+
 We first check that the correlation structure amongst the variables (see \cref{fig:wine_heatmap}),
 including the quality of the wine.
 This should give us a general idea of how and if the variables are related to one another.
+
+\begin{pycode}
+print('Hello, World')
+\end{pycode}
 
 \begin{figure}[h!]
     \includegraphics[width=0.9\textwidth]{figs/wine_heatmap}
