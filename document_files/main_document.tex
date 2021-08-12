@@ -7,14 +7,30 @@
 % Packages
 \usepackage{amsmath}
 \usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    citecolor=blue
+}
 \usepackage{cleveref}
 \usepackage[margin=1.1in]{geometry}
 \usepackage{python}
 \usepackage{pythontex}
+% Documentation
+% https://raw.githubusercontent.com/gpoore/pythontex/master/pythontex/pythontex.pdf
+% tricks
+% https://raw.githubusercontent.com/gpoore/pythontex/master/pythontex_gallery/pythontex_gallery.tex
+% compilation
 %pdflatex -aux-directory=/home/domore/PycharmProjects/ds_project-1/document_files/aux -output-directory=/home/domore/PycharmProjects/ds_project-1 main_document.tex
 %python document_files/pythontex/pythontex3.py document_files/main_document.tex
 %pdflatex -aux-directory=/home/domore/PycharmProjects/ds_project-1/document_files/aux -output-directory=/home/domore/PycharmProjects/ds_project-1 main_document.tex
 \usepackage[framemethod=TikZ]{mdframed}
+\usepackage{booktabs}
+%\usepackage{multirow}
+\usepackage{rotating}
 
 % for future projects
 % \usepackage[usefamily=juliacon]{pythontex}
@@ -22,10 +38,21 @@
 % Document
 \begin{document}
 
-\part[wine]{Project 1: Wine Quality}
+\part[wine]{Project 1: Wine quality} \label{part:wine}
 
+\section*{Introduction}
+In the paragraphs to come we will discuss different approaches and models to be used in the dataset used in~\cite{wine}.
 
-\begin{pyconsole}[][frame=single]
+The following dataset consist of different a sample of wines with different characteristics and their relevant
+quality.
+The box below has an overview description of the dataset we will analyse.
+A further description of each variable can be found in \Cref{tab:description_wine}.
+
+% these lines will not be presented in the pdf
+% pyconcode only excecutes (does not show code)
+%! suppress = EscapeUnderscore
+%! suppress = EscapeHashOutsideCommand
+\begin{pyconcode}
 import pandas as pd
 import os
 
@@ -37,16 +64,22 @@ file_name = 'winequality-red.csv'
 path_file = f'{path}/code_python/project1_wine/data/{file_name}'
 # We load the data and present an overview
 wine_data = pd.read_csv(path_file)
+\end{pyconcode}
+
+%! suppress = EscapeUnderscore
+\begin{pyconsole}[][frame=single]
 wine_data.info()
+wine_data.describe().round(decimals=2).transpose()
 \end{pyconsole}
 
-We first check that the correlation structure amongst the variables (see \cref{fig:wine_heatmap}),
+\section*{Exploratory analysis}
+
+To avoid unnecessary analysis, first we will perform a few checks to get a deeper understanding of the
+data we are using.
+To that end, we first check that the correlation structure amongst the variables (see \cref{fig:wine_heatmap}),
 including the quality of the wine.
 This should give us a general idea of how and if the variables are related to one another.
 
-\begin{pycode}
-print('Hello, World')
-\end{pycode}
 
 \begin{figure}[h!]
     \includegraphics[width=0.9\textwidth]{figs/wine_heatmap}
@@ -54,16 +87,22 @@ print('Hello, World')
     \label{fig:wine_heatmap}
 \end{figure}
 
-There are a few things we could appreciate to check whether the data we are looking relates somehow
+
+There are a few things we could check whether the data in the data to assess whether what we are looking relates somehow
 to our prior knowledge about the topic.
 This prior knowledge might help us identify certain links, that might not be obvious if the data were not labeled.
 
-At first glance, one can note that \emph{fixed acidity} is strongly correlated (negatively) to the \emph{pH},
-although their correlation is not \emph{1}.
+At first glance, one can note that \emph{fixed acidity} and \emph{citric acidity} are strongly correlated (negatively) to the \emph{pH},
+although their correlation is not \emph{-1}.
+This should relate to our prior knowledge, given that \emph{pH} is directly related to the acidity of a
+solution.
 Additionally, we can see that \emph{alcohol} correlates negatively with the \emph{density} of the wine.
 This makes sense, given that the wine is a solution of different solutes, those in all likelihood are ``heavier''
 than the alcohol solute.
 Hence, the more the alcohol content increases in the wine, the less dense it becomes.
+Another interesting characteristic of the wine that is highly correlated to its quality is the
+alcohol content.
+
 \vspace{2pt}
 Another visual analysis we could perform is to look at the KDEs (Kernel Density Estimates).
 These we could imagine as a cross-sectional cut in a bi-variate probability distribution.
@@ -80,12 +119,43 @@ of fitting will have trouble predicting a grade close to 3 and 8 and beyond (to 
     \label{fig:wine_kdes}
 \end{figure}
 
+
+\section*{Conclusion}
+
+{\color{red}\textbf{[1]}} All these characteristics are important in a wine.
+We used all these statistical models to try to understand to which degree they are important
+to determine a wine`s quality.
+These analyses might be really important for a winemaker to know.
+Given that by affecting the inherent characteristics of the wine will most likely have an
+impact on the quality of that wine.
+
 \newpage
-\part[food]{Project 2: Food Preferences}
+\part[food]{Project 2: Food Preferences} \label{part:food}
 
 
 \newpage
-\part[stores]{Project 3: Store Sales}
+\part[stores]{Project 3: Store Sales} \label{part:sales}
+
+
+
+\begin{thebibliography}{1}
+\bibitem{wine} P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. {\em Modeling wine preferences by data mining from physicochemical properties.
+In Decision Support Systems, Elsevier, 47(4):547-553},  2009.
+\end{thebibliography}
+
+
+
+
+\begin{sidewaystable}
+    \centering
+    \caption{Description of wine characteristics.}
+    \resizebox{\columnwidth}{!}{
+    \input{../code_python/project1_wine/description_wine.tex}
+    }
+    \label{tab:description_wine}
+\end{sidewaystable}
+
+
 
 
 
