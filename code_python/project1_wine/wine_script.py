@@ -5,19 +5,21 @@ import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Referencing folders and data names
+## Referencing folders and data names
 path = os.getcwd()
 # path = os.path.abspath(os.path.join(path, os.pardir))  # when in latex
 file_name = 'winequality-red.csv'
 path_file = f'{path}/code_python/project1_wine/data/{file_name}'
 
-# Loading the data
+## Loading the data
 wine_data = pd.read_csv(path_file)
+features = wine_data.columns
 
-# Exploratory analysis
+## Exploratory analysis
 
 # Checking overall structure of the data
 wine_data_info = wine_data.info()
+wine_data.describe().round(decimals=2).transpose()
 # Since there are no null or NAs we can proceed to analyse the data further
 
 # Using Pearson Correlation
@@ -31,7 +33,7 @@ plt.show()
 
 # Subplots with KDE to check for clusters
 fig, axes = plt.subplots(3, 4, sharey=True, figsize=(12, 11))
-fig.suptitle('KDE plots - Quality against each feature', fontsize='xx-large')
+fig.suptitle('KDE plots - Quality against each wine characteristic', fontsize='xx-large')
 #  Quality vs. each wine feature
 row = 0
 column = 0
@@ -39,7 +41,7 @@ feature = 0
 while True:
     sns.kdeplot(ax=axes[row, column], x=wine_data.iloc[:, feature], y=wine_data.iloc[:, 11])
     if row == 2 and column == 2:
-        sns.histplot(ax=axes[row, column+1], data=wine_data, y='quality', kde=True)
+        sns.histplot(ax=axes[row, column + 1], data=wine_data, y='quality', kde=True)
         # fig.delaxes(ax=axes[row, column+1]) # if we want a blank output in the last subplot
         break
     feature += 1
@@ -82,20 +84,120 @@ description_df = pd.DataFrame(list(description.items()), columns=['Characteristi
 # End of Exploratory Analysis
 
 
+## Quality prediction.
+# Loss-function assessment
+from sklearn.metrics import mean_squared_error as rmse, r2_score as score
 
+# rms = mean_squared_error(y_actual, y_predicted, squared=False)
 
+# Pre-processing
+# Shaping data
+X = wine_data.drop('quality', axis=1)
+y = wine_data['quality']
+# Defining a seed for shuffling the data
+seed = 123
+# Splitting data into train/test.
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
+X_train, X_test, Y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=seed)
+# Converting 1D arrays to dataframe
+y_train = pd.DataFrame(Y_train, columns=['quality'])
+# Y_test = pd.DataFrame(Y_test, columns=['quality'])
+# Scaling training samples
+train_X_scaler = StandardScaler()
+train_Y_scaler = StandardScaler()
+# we first fit the training data to different scaling objects to keep track of them
+train_X_scaler.fit(X_train)
+train_Y_scaler.fit(y_train)
+x_train = train_X_scaler.transform(X_train)
+y_train = train_Y_scaler.transform(y_train)
 
+# Methods
+results = {}
 
+# Linear Regression
+# Normal Linear Regression (L2 Norm)
+from sklearn.linear_model import LinearRegression as lr
 
+# We first initialise the model and then fit with the training observations
+normal_lr = lr(fit_intercept=True, normalize=False)
+normal_lr.fit(X=x_train, y=y_train)
+# Predicting values, we first need to transform the X_test matrix using our earlier defined scale
+nlr_y = normal_lr.predict(train_X_scaler.transform(X_test))
+# Reverting our predicted values to their level using the scale determined from the training sample
+nlr_y = train_Y_scaler.inverse_transform(nlr_y)
+nlr_rmse = rmse(y_test, nlr_y, squared=False)
+nlr_score = score(y_true=y_test, y_pred=nlr_y)
+results['linear regression'] = [nlr_rmse, nlr_score]
 
+# Lasso Linear Regression (L1 Norm)
+# we do not standardize here otherwise the lasso regression might turn all coefficients to 0 only to use the intercept.
+from sklearn.linear_model import Lasso as lasso
 
+# We first initialise the model and then fit with the training observations
+# also do not use intercept, if the intercept is allowed, again makes most of the coefficients to be 0.
+lasso_lr = lasso(fit_intercept=False, normalize=False)
+lasso_lr.fit(X=X_train, y=Y_train)
+# Predicting values, we first need to transform the X_test matrix using our earlier defined scale
+lassolr_y = lasso_lr.predict(X_test)
+# Reverting our predicted values to their level using the scale determined from the training sample
+lassolr_y = train_Y_scaler.inverse_transform(lassolr_y)
+lassolr_rmse = rmse(y_test, lassolr_y, squared=False)
+lassolr_score = score(y_true=y_test, y_pred=lassolr_y)
+results['lasso linear regression'] = [lassolr_rmse, lassolr_score]
+# todo here we can see that the lasso rmse is higher than the normal linear regression, to be expected due the
+#  objective function to minimise
+# todo explain that a negative score just means that the particular model is performing quite poorly.
 
+# Neural Network
+from sklearn.neural_network import MLPRegressor
 
+# try:
+NN_scikit = MLPRegressor(random_state=seed, max_iter=1000, hidden_layer_sizes=(22, 22)).fit(x_train, y_train)
+# we use (22,) in the hidden layers to try to capture the features and their interactions, we will do it
+# because it is too little data. This is pushing it a bit, given the small sample size
+nn_scikit_y = NN_scikit.predict(train_X_scaler.transform(X_test))
+# Reverting our predicted values to their level using the scale determined from the training sample
+nn_scikit_y = train_Y_scaler.inverse_transform(nn_scikit_y)
+nn_scikit_rmse = rmse(y_test, nn_scikit_y, squared=False)
+nn_scikit_score = score(y_true=y_test, y_pred=nn_scikit_y)
+results['NN Scikit'] = [nn_scikit_rmse, nn_scikit_score]
 
+fig, axes = plt.subplots(1, 3, sharey=True, figsize=(12, 11))
+axes[0].set_title('Training Sample')
+axes[1].set_title('Test Sample')
+axes[2].set_title('NN predicted Quality')
+sns.histplot(x=Y_train, ax=axes[0], kde=True, stat="probability")
+sns.histplot(x=y_test, ax=axes[1], kde=True, stat="probability")
+sns.histplot(x=nn_scikit_y, ax=axes[2], kde=True, stat="probability")
+plt.show()
 
+# Regression Tree
+from sklearn.tree import DecisionTreeRegressor
+from sklearn import tree
+import graphviz
 
+tree_model = DecisionTreeRegressor(max_depth=4)
+tree_model.fit(X_train, Y_train)
+tree_y = tree_model.predict(X_test)
+tree_rmse = rmse(y_test, tree_y, squared=False)
+tree_score = score(y_true=y_test, y_pred=tree_y)
+results['Regression Tree'] = [tree_rmse, tree_score]
 
+plt.figure(figsize=(12, 10))
+tree_viz = tree.export_graphviz(tree_model, out_file=None,
+                                feature_names=features[0:10],
+                                class_names=features[11],
+                                filled=True, rounded=True,
+                                special_characters=True)
+tree_graph = graphviz.Source(tree_viz)
+# tree_graph.render('wine_data')
+tree_graph
+plt.show()
 
+plt.figure(figsize=(12, 10))
+tree.plot_tree(tree_model)
+plt.show()
 
-
+pd.DataFrame(results).round(decimals=2).transpose()
