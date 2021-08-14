@@ -77,6 +77,7 @@ description = {'fixed acidity': 'most acids involved with wine or fixed or nonvo
                'quality': 'output variable (based on sensory data, score between 0 and 10).'
                }
 description_df = pd.DataFrame(list(description.items()), columns=['Characteristic', 'Description'])
+# Saving table to latex output
 # pd.options.display.max_colwidth = 400
 # print(description_df.to_latex(index=False, multirow=True),
 #      file=open(f'{path}/code_python/project1_wine/description_wine.tex', "a"))
@@ -86,7 +87,7 @@ description_df = pd.DataFrame(list(description.items()), columns=['Characteristi
 
 ## Quality prediction.
 # Loss-function assessment
-from sklearn.metrics import mean_squared_error as rmse, r2_score as score
+from sklearn.metrics import mean_squared_error as rmse, r2_score as score, mean_absolute_percentage_error as mape
 
 # rms = mean_squared_error(y_actual, y_predicted, squared=False)
 
@@ -115,6 +116,7 @@ y_train = train_Y_scaler.transform(y_train)
 
 # Methods
 results = {}
+model_predictions = pd.DataFrame()
 
 # Linear Regression
 # Normal Linear Regression (L2 Norm)
@@ -128,8 +130,10 @@ nlr_y = normal_lr.predict(train_X_scaler.transform(X_test))
 # Reverting our predicted values to their level using the scale determined from the training sample
 nlr_y = train_Y_scaler.inverse_transform(nlr_y)
 nlr_rmse = rmse(y_test, nlr_y, squared=False)
+nrl_mape = mape(y_true=y_test, y_pred=nlr_y)
 nlr_score = score(y_true=y_test, y_pred=nlr_y)
-results['linear regression'] = [nlr_rmse, nlr_score]
+results['linear regression'] = [nlr_rmse, nrl_mape, nlr_score]
+model_predictions['linear regression'] = np.ravel(nlr_y)
 
 # Lasso Linear Regression (L1 Norm)
 # we do not standardize here otherwise the lasso regression might turn all coefficients to 0 only to use the intercept.
@@ -144,8 +148,10 @@ lassolr_y = lasso_lr.predict(X_test)
 # Reverting our predicted values to their level using the scale determined from the training sample
 lassolr_y = train_Y_scaler.inverse_transform(lassolr_y)
 lassolr_rmse = rmse(y_test, lassolr_y, squared=False)
+lassorl_mape = mape(y_true=y_test, y_pred=lassolr_y)
 lassolr_score = score(y_true=y_test, y_pred=lassolr_y)
-results['lasso linear regression'] = [lassolr_rmse, lassolr_score]
+results['lasso linear regression'] = [lassolr_rmse, lassorl_mape, lassolr_score]
+model_predictions['lasso linear regression'] = np.ravel(lassolr_y)
 # todo here we can see that the lasso rmse is higher than the normal linear regression, to be expected due the
 #  objective function to minimise
 # todo explain that a negative score just means that the particular model is performing quite poorly.
@@ -153,25 +159,51 @@ results['lasso linear regression'] = [lassolr_rmse, lassolr_score]
 # Neural Network
 from sklearn.neural_network import MLPRegressor
 
-# try:
-NN_scikit = MLPRegressor(random_state=seed, max_iter=1000, hidden_layer_sizes=(22, 22)).fit(x_train, y_train)
+NN_scikit = MLPRegressor(random_state=seed,
+                         max_iter=1000,
+                         hidden_layer_sizes=(22, 22),
+                         activation='logistic').fit(x_train, np.ravel(y_train))
+NN_scikit.out_activation_ = 'identity'
 # we use (22,) in the hidden layers to try to capture the features and their interactions, we will do it
 # because it is too little data. This is pushing it a bit, given the small sample size
 nn_scikit_y = NN_scikit.predict(train_X_scaler.transform(X_test))
 # Reverting our predicted values to their level using the scale determined from the training sample
 nn_scikit_y = train_Y_scaler.inverse_transform(nn_scikit_y)
 nn_scikit_rmse = rmse(y_test, nn_scikit_y, squared=False)
+nn_scikit_mape = mape(y_true=y_test, y_pred=nn_scikit_y)
 nn_scikit_score = score(y_true=y_test, y_pred=nn_scikit_y)
-results['NN Scikit'] = [nn_scikit_rmse, nn_scikit_score]
+results['NN Scikit'] = [nn_scikit_rmse, nn_scikit_mape, nn_scikit_score]
+model_predictions['NN Scikit'] = np.ravel(nn_scikit_y)
 
-fig, axes = plt.subplots(1, 3, sharey=True, figsize=(12, 11))
-axes[0].set_title('Training Sample')
-axes[1].set_title('Test Sample')
-axes[2].set_title('NN predicted Quality')
-sns.histplot(x=Y_train, ax=axes[0], kde=True, stat="probability")
-sns.histplot(x=y_test, ax=axes[1], kde=True, stat="probability")
-sns.histplot(x=nn_scikit_y, ax=axes[2], kde=True, stat="probability")
-plt.show()
+# NN With Keras
+import tensorflow as tf
+from keras.models import Sequential
+from keras.layers import Dense
+
+nn_keras_tf = Sequential()
+nn_keras_tf.add(Dense(22,
+                      input_dim=11,  # expects 11 inputs
+                      activation='sigmoid'))
+nn_keras_tf.add(Dense(1, activation='linear'))
+# since we are using keras to call TF we need to compile the model we designed in keras
+# for it to be into the TF framework.
+# print(dir(tf.keras.optimizers))
+# print(dir(tf.keras.losses))
+# print(dir(tf.keras.metrics))
+nn_keras_tf.compile(loss='MeanSquaredError', optimizer='adam', metrics=['MeanSquaredError'])
+nn_keras_tf.fit(x_train, y_train, epochs=150)
+nn_keras_tf_y = train_Y_scaler.inverse_transform(nn_keras_tf.predict(train_X_scaler.transform(X_test)))
+nn_keras_tf_rmse = rmse(y_test, nn_keras_tf_y, squared=False)
+nn_keras_tf_mape = mape(y_true=y_test, y_pred=nn_keras_tf_y)
+nn_keras_tf_score = score(y_true=y_test, y_pred=nn_keras_tf_y)
+results['NN Keras TF'] = [nn_keras_tf_rmse, nn_keras_tf_mape, nn_keras_tf_score]
+model_predictions['NN Keras TF'] = np.ravel(nn_keras_tf_y)
+
+# from keras.utils.vis_utils import plot_model
+# import graphviz
+# import pydot
+# plot_model(nn_keras_tf)
+
 
 # Regression Tree
 from sklearn.tree import DecisionTreeRegressor
@@ -179,13 +211,17 @@ from sklearn import tree
 import graphviz
 
 tree_model = DecisionTreeRegressor(max_depth=4)
+# Data without scaling.
 tree_model.fit(X_train, Y_train)
 tree_y = tree_model.predict(X_test)
 tree_rmse = rmse(y_test, tree_y, squared=False)
+tree_mape = mape(y_true=y_test, y_pred=tree_y)
 tree_score = score(y_true=y_test, y_pred=tree_y)
-results['Regression Tree'] = [tree_rmse, tree_score]
+results['Regression Tree'] = [tree_rmse, tree_mape, tree_score]
+model_predictions['Regression Tree'] = np.ravel(tree_y)
 
-plt.figure(figsize=(12, 10))
+# problem with the visualisation
+'''plt.figure(figsize=(12, 10))
 tree_viz = tree.export_graphviz(tree_model, out_file=None,
                                 feature_names=features[0:10],
                                 class_names=features[11],
@@ -199,5 +235,80 @@ plt.show()
 plt.figure(figsize=(12, 10))
 tree.plot_tree(tree_model)
 plt.show()
+'''
 
-pd.DataFrame(results).round(decimals=2).transpose()
+# SVM (Regression)
+
+from sklearn.svm import LinearSVR, SVR
+
+SVR
+svr = LinearSVR(random_state=seed, tol=1e-4, max_iter=10000, loss='squared_epsilon_insensitive')
+svr = SVR()
+
+svr.fit(x_train, np.ravel(y_train))
+svr_y = train_Y_scaler.inverse_transform(svr.predict(train_X_scaler.transform(X_test)))
+svr_rmse = rmse(y_test, svr_y, squared=False)
+svr_mape = mape(y_true=y_test, y_pred=svr_y)
+svr_score = score(y_true=y_test, y_pred=svr_y)
+results['SVR'] = [svr_rmse, svr_mape, svr_score]
+model_predictions['SVR'] = np.ravel(svr_y)
+
+# Checking the results
+
+results_table = pd.DataFrame(results).round(decimals=2).transpose()
+results_table.columns = ['RMSE', 'MAPE', 'Score']
+results_table
+
+fig, axes = plt.subplots(4, 2, sharey=True, figsize=(12, 13))
+fig.suptitle('(Normalised) Relative frequency - Comparison train/test/predicted samples', fontsize='xx-large')
+axes[0, 0].set_title('Quality in training Sample')
+sns.histplot(x=Y_train, ax=axes[0, 0], kde=True, stat="probability", color='red')
+axes[0, 1].set_title('Quality in test Sample')
+sns.histplot(x=y_test, ax=axes[0, 1], kde=True, stat="probability", color='red')
+r_count = 1
+col_count = 0
+for column_i in model_predictions.columns:
+    axes[r_count, col_count].set_title(f'{column_i} predicted Quality')
+    sns.histplot(data=model_predictions, x=column_i, ax=axes[r_count, col_count], kde=True, stat="probability")
+    col_count += 1
+    if col_count == 2:
+        col_count = 0
+        r_count += 1
+    if r_count > 3:
+        break
+fig.subplots_adjust(hspace=0.4)
+plt.show()
+
+# SHAP and LIME analysis
+import ipython_genutils
+import shap
+
+import lime
+
+
+def inverse_transform_shap_values(scaler_x, scaler_y, shap_values_all):
+    # shap_values_all.values = scaler_x.inverse_transform(shap_values_all.values)
+    shap_values_all.base_values = shap_values_all.base_values * scaler_y.scale_ + scaler_y.mean_
+    shap_values_all.values = shap_values_all.values * scaler_y.scale_ + scaler_y.mean_
+    return shap_values_all
+
+
+# for normal linear model
+explainer_lr = shap.Explainer(normal_lr, masker=X_test)
+shap_values_lr = explainer_lr(X_test)
+shap_values_lr = inverse_transform_shap_values(train_X_scaler, train_Y_scaler, explainer_lr(X_test))
+
+# for tree
+explainer_tree = shap.Explainer(tree_model, masker=X_test)
+shap_values_tree = explainer_tree(X_test)
+
+plt.figure(figsize=(12, 10))
+shap.plots.waterfall(shap.Explanation(values=shap_values_lr[0],
+                                      feature_names=X_train.columns.tolist()))
+plt.show()
+
+shap.initjs()
+ex = shap.KernelExplainer(tree_model.predict, X_train)
+shap_values = ex.shap_values(X_test.iloc[0, :])
+shap.force_plot(ex.expected_value, shap_values[0], X_test.iloc[0, :])
+plt.show()
