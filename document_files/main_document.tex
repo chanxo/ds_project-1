@@ -19,6 +19,7 @@
 \usepackage[margin=1.1in]{geometry}
 \usepackage{python}
 \usepackage{pythontex}
+\usepackage{pdfpages}
 % Documentation
 % https://raw.githubusercontent.com/gpoore/pythontex/master/pythontex/pythontex.pdf
 % tricks
@@ -38,9 +39,13 @@
 % Document
 \begin{document}
 
-\part[wine]{Project 1: Wine quality} \label{part:wine}
+\includepdf[pages={2}]{src/titlepage.pdf}
 
-\section*{Introduction}
+\tableofcontents\newpage
+
+\part{Wine quality} \label{part:wine}
+
+\section{Introduction}\label{sec:introduction}
 In the paragraphs to come we will discuss different approaches and models to be used in the dataset used in~\cite{wine}.
 
 The following dataset consist of different a sample of wines with different characteristics and their relevant
@@ -55,6 +60,7 @@ A further description of each variable can be found in \Cref{tab:description_win
 \begin{pyconcode}
 import pandas as pd
 import os
+import numpy as np
 
 # Referencing folders and data names
 path = os.getcwd()
@@ -67,12 +73,13 @@ wine_data = pd.read_csv(path_file)
 \end{pyconcode}
 
 %! suppress = EscapeUnderscore
-\begin{pyconsole}[][frame=single]
+%\begin{pyconsole}[][frame=single]
+\begin{pyconsole}[][]
 wine_data.info()
 wine_data.describe().round(decimals=2).transpose()
 \end{pyconsole}
 
-\section*{Exploratory analysis}
+\section{Exploratory analysis}\label{sec:exploratory-analysis}
 
 To avoid unnecessary analysis, first we will perform a few checks to get a deeper understanding of the
 data we are using.
@@ -88,9 +95,9 @@ This should give us a general idea of how and if the variables are related to on
 \end{figure}
 
 
-There are a few things we could check whether the data in the data to assess whether what we are looking relates somehow
+There are a few things we could check in the data to assess whether what we are looking relates somehow
 to our prior knowledge about the topic.
-This prior knowledge might help us identify certain links, that might not be obvious if the data were not labeled.
+This prior knowledge might help us identify certain links, that might not be obvious if the data were not labelled.
 
 At first glance, one can note that \emph{fixed acidity} and \emph{citric acidity} are strongly correlated (negatively) to the \emph{pH},
 although their correlation is not \emph{-1}.
@@ -98,19 +105,19 @@ This should relate to our prior knowledge, given that \emph{pH} is directly rela
 solution.
 Additionally, we can see that \emph{alcohol} correlates negatively with the \emph{density} of the wine.
 This makes sense, given that the wine is a solution of different solutes, those in all likelihood are ``heavier''
-than the alcohol solute.
+than the alcohol solute, as well as the water solvent which is definitely ``heavier'' than alcohol.
 Hence, the more the alcohol content increases in the wine, the less dense it becomes.
 Another interesting characteristic of the wine that is highly correlated to its quality is the
 alcohol content.
 
 \vspace{2pt}
-Another visual analysis we could perform is to look at the KDEs (Kernel Density Estimates).
-These we could imagine as a cross-sectional cut in a bi-variate probability distribution.
+Another visual analysis we could perform are KDEs (Kernel Density Estimates).
+These, we could imagine as a cross-sectional cut in a bi-variate probability distribution.
 \Cref{fig:wine_kdes} shows us that even though the wines in the sample range from quality 3 to 8
-(see subplot in row 3, column 4), it would seem that there are mostly 4 important groups.
-The earlier stated fact, ad priori, gives us an interesting thing we should have in mind when trying
+(see histogram subplot in row 3, column 4), it would seem that there are mostly 4 important groups.
+The earlier stated fact, ad priori, provide us with a key insight we should have in mind when trying
 to fit any kind of model.
-I.e., the tails of the quality (grades 3 and 8) will be underrepresented, then most model we could think
+I.e., the tails of the quality (grades 3 and 8) will be underrepresented, then most models we could think
 of fitting will have trouble predicting a grade close to 3 and 8 and beyond (to each direction).
 
 \begin{figure}[h!]
@@ -120,24 +127,215 @@ of fitting will have trouble predicting a grade close to 3 and 8 and beyond (to 
 \end{figure}
 
 
-\section*{Analyses}
+\section{Analyses}\label{sec:analyses}
 
-Among the many things that we could analyse in these data\footnote{Some other analyses, like clustering the wine sample do
+Among the many features that we could analyse in these data\footnote{Some other analyses, like clustering the wine sample do
 carry the same importance. I.e., we could try clustering the wine sample, to find that certain
 wines belong or were produced by the same vineyard due to the similarities in the grapes which
 will most likely relate to their characteristics when turned into wine.
-Even though, this might be interesting it is not really useful to a researcher/data scientist trying to add value
+Even though this might be interesting, it is not as useful to a researcher/data scientist trying to add value
 to the winemaking processes.}, we will stick to predicting the quality
 of a wine given its characteristics.
 
+To predict the quality of the wines, we will use all possible available features\footnote{Could be that using all
+features decreases the predictive power of certain models. But these we could only find out through thorough investigation
+which is out of the scope in this project.} and split our database: 80\% of the data will be used for training and
+the remaining 20\% will be used for testing and computing assessment metrics.
+To achieve this, we will mostly use \emph{sci-kit learn} library and sub-libraries.
 
-% todo: explain why the shape of the kde won't change after standardisation
+%! suppress = EscapeUnderscore
+%! suppress = EscapeHashOutsideCommand
+\begin{pyconsole}[][]
+# Pre-processing
+# Shaping data
+X = wine_data.drop('quality', axis=1)
+y = wine_data['quality']
+# Defining a seed for shuffling the data
+seed = 123
+# Splitting data into train/test.
+from sklearn.model_selection import train_test_split
+X_train, X_test, Y_train, y_test = train_test_split(X, y, test_size=0.20,
+                                                    random_state=seed)
+\end{pyconsole}
 
-% todo: explain why we should standardize the training sample after we split the samples, to avoid data snooping.
+After splitting our initial sample into train and test, we proceed to standardize it.
+Although this is not absolutely necessary, there are some models we will use in the following that
+have better performance and provide better estimates\footnote{Less prone to be biased.}.
+Then, some models will use the standardized data, and some others (like in \emph{tree regression})
+will not.
+
+%! suppress = EscapeUnderscore
+%! suppress = EscapeHashOutsideCommand
+\begin{pyconsole}[][]
+# Converting 1D arrays to dataframe
+y_train = pd.DataFrame(Y_train, columns=['quality'])
+# Scaling training samples
+from sklearn.preprocessing import StandardScaler
+train_X_scaler = StandardScaler()
+train_Y_scaler = StandardScaler()
+# we first fit the training data to different scaling objects
+# to keep track of them
+train_X_scaler.fit(X_train)
+train_Y_scaler.fit(y_train)
+x_train = train_X_scaler.transform(X_train)
+y_train = train_Y_scaler.transform(y_train)
+\end{pyconsole}
+
+It is important to note that the scaling (standardization) is only performed in the \textbf{training sample}.
+Then, when we have our predictions from the models in the \emph{scaled space}, we will revert them back
+to the \emph{observation space} using the inverse scaling we determined on the train sample.
+This is of high importance when trying to build a predictive model.
+If we used the scaling from the test sample, we would be \emph{snooping into the data}, which would probably
+increase the models' accuracy (artificially), but with the power of \emph{hindsight}.
+
+In the following snippets, code of the fitting will be provided.
+After all models are presented, the results will be shown, and some discussion stemming from them will be
+held.
+
+\subsection{Linear Regression}\label{subsec:linear-regression}
+
+%! suppress = EscapeUnderscore
+%! suppress = EscapeHashOutsideCommand
+\begin{pyconsole}[][]
+# Linear Regression
+# Normal Linear Regression (L2 Norm)
+from sklearn.linear_model import LinearRegression as lr
+
+# We first initialise the model and then fit with the training obs.
+normal_lr = lr(fit_intercept=True, normalize=False)
+normal_lr.fit(X=x_train, y=y_train)
+# Predicting values, we first need to transform the X_test matrix
+# using our earlier defined scale
+nlr_y = normal_lr.predict(train_X_scaler.transform(X_test))
+# Reverting our predicted values to their level using the scale determined
+# from the training sample
+nlr_y = train_Y_scaler.inverse_transform(nlr_y)
+\end{pyconsole}
+
+\subsection{Lasso Regression}\label{subsec:lasso-regression}
+%! suppress = EscapeUnderscore
+%! suppress = EscapeHashOutsideCommand
+\begin{pyconsole}[][]
+# Lasso Linear Regression (L1 Norm)
+# we do not standardize here otherwise the lasso regression might turn
+# all coefficients to 0 only to use the intercept.
+from sklearn.linear_model import Lasso as lasso
+# We first initialise the model and then fit with the training obs.
+# also do not use intercept, if the intercept is allowed, again makes
+# most of the coefficients to be 0.
+lasso_lr = lasso(fit_intercept=False, normalize=False)
+lasso_lr.fit(X=X_train, y=Y_train)
+# Predicting values, we first need to transform the X_test matrix using
+# our earlier defined scale.
+lassolr_y = lasso_lr.predict(X_test)
+# Reverting our predicted values to their level using the scale determined
+# from the training sample.
+lassolr_y = train_Y_scaler.inverse_transform(lassolr_y)
+\end{pyconsole}
+
+\subsection{Neural Networks}\label{subsec:neural-networks}
+
+%! suppress = EscapeUnderscore
+%! suppress = EscapeHashOutsideCommand
+\begin{pyverbatim}[][]
+# Neural Network - using sklearn
+from sklearn.neural_network import MLPRegressor
+
+NN_scikit = MLPRegressor(random_state=seed,
+                         max_iter=500,
+                         hidden_layer_sizes=(22,),
+                         activation='logistic').fit(x_train,
+                                                    np.ravel(y_train))
+NN_scikit.out_activation_ = 'identity'
+# we use (22,) in the hidden layers to try to capture the features and
+# their interactions, we will do it because it is too little data.
+# Using more neurons or hidden layers in this case might induce
+# over-fitting, given the small sample size.
+nn_scikit_y = NN_scikit.predict(train_X_scaler.transform(X_test))
+# Reverting our predicted values to their level using the scale determined
+# from the training sample.
+nn_scikit_y = train_Y_scaler.inverse_transform(nn_scikit_y)
+\end{pyverbatim}
+
+
+%! suppress = EscapeUnderscore
+%! suppress = EscapeHashOutsideCommand
+\begin{pyverbatim}[][]
+# NN With Keras
+from keras.models import Sequential
+from keras.layers import Dense
+import tensorflow as tf
+tf.random.set_seed(seed)
+
+
+def squared_loss(y_true, y_pred):
+    squared_difference = tf.square(y_true - y_pred)
+    return tf.reduce_sum(squared_difference, axis=-1)  # Note the `axis=-1`
+
+
+nn_keras_tf = Sequential()
+nn_keras_tf.add(Dense(22,
+                      input_dim=11,  # expects 11 inputs
+                      activation='sigmoid'))
+nn_keras_tf.add(Dense(1, activation='linear'))  # output layer
+# since we are using keras to call TF we need to compile the model we
+# designed in keras for it to be into the TF framework.
+# print(dir(tf.keras.optimizers))
+# print(dir(tf.keras.losses))
+# print(dir(tf.keras.metrics))
+nn_keras_tf.compile(loss=squared_loss, optimizer='adam')
+nn_keras_tf.fit(x_train, y_train, epochs=500)
+nn_keras_tf_y = train_Y_scaler.inverse_transform(
+                nn_keras_tf.predict(train_X_scaler.transform(X_test)))
+\end{pyverbatim}
+
+\subsection{Regression Tree}\label{subsec:regression-tree}
+
+%! suppress = EscapeUnderscore
+%! suppress = EscapeHashOutsideCommand
+\begin{pyverbatim}[][]
+# Regression Tree
+from sklearn.tree import DecisionTreeRegressor
+
+tree_model = DecisionTreeRegressor(max_depth=4)
+# Data without scaling.
+tree_model.fit(X_train, Y_train)
+tree_y = tree_model.predict(X_test)
+\end{pyverbatim}
+
+\subsection{Support Vector Regression (SVR)}\label{subsec:support-vector-regression-(svr)}
+
+%! suppress = EscapeUnderscore
+%! suppress = EscapeHashOutsideCommand
+\begin{pyverbatim}[][]
+# SVM (Regression)
+from sklearn.svm import SVR
+
+svr = SVR()
+svr.fit(x_train, np.ravel(y_train))
+svr_y = train_Y_scaler.inverse_transform(svr.predict(
+                                        train_X_scaler.transform(X_test)))
+\end{pyverbatim}
+
+
+\section{Results}\label{sec:results}
+
+Most of the models used in \Cref{sec:analyses} were fitted using \emph{sk-learn} libraries.
+This was done just for ease of quick prototyping and implementation, but for production models, probably
+other libraries would be preferred, if not outright developing some of them from scratch.
+One model, one neural network, was fitted with \emph{keras} to emphasize that the results should be quite
+similar, however not identical\footnote{There are several reasons why almost two identically defined models
+can have different outputs, in particular when it comes to neural networks. Some of these factors are the
+solvers used, the number of epochs, learning rate and steps, tolerances and staring points.}.
+
+%\caption{Description of wine characteristics.}
+\input{../code_python/project1_wine/model_results.tex}
+%\label{tab:model_results}
 
 
 
-\section*{Conclusion}
+
+\section{Discussion}\label{sec:discussion}
 
 {\color{red}\textbf{[1]}} All these characteristics are important in a wine.
 We used all these statistical models to try to understand to which degree they are important
@@ -146,21 +344,11 @@ These analyses might be really important for a winemaker to know.
 Given that by affecting the inherent characteristics of the wine will most likely have an
 impact on the quality of that wine.
 
-\newpage
-\part[food]{Project 2: Food Preferences} \label{part:food}
-
-
-\newpage
-\part[stores]{Project 3: Store Sales} \label{part:sales}
-
-
 
 \begin{thebibliography}{1}
 \bibitem{wine} P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. {\em Modeling wine preferences by data mining from physicochemical properties.
 In Decision Support Systems, Elsevier, 47(4):547-553},  2009.
 \end{thebibliography}
-
-
 
 
 \begin{sidewaystable}

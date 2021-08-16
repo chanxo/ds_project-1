@@ -2,10 +2,15 @@
 %! Date = 8/11/21
 
 \documentclass{amsart}
-\usepackage[margin=1in]{geometry}
+%\usepackage[margin=1in]{geometry}
 \usepackage{afterpage}
 \usepackage{tikz}
+\usepackage[top=2cm, bottom=2cm, outer=0cm, inner=0cm]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{color}
 \usetikzlibrary{fadings}
+% https://tex.stackexchange.com/questions/167719/how-to-use-background-image-in-latex
 
 \begin{document}
 
@@ -13,23 +18,35 @@
 \DeclareFixedFont{\subtitlefont}{T1}{ppl}{b}{}{0.4in}
 \afterpage{\restoregeometry}
 \newgeometry{left=1in, right=1in,top=1in, bottom=0in}
-\definecolor{mytan}{HTML}{FF6200}
+\definecolor{mytan}{HTML}{FF6515}
 \pagecolor{mytan}\afterpage{\nopagecolor}
 
-\thispagestyle{empty}
+%\thispagestyle{empty}
+{\color{white}
 \begin{flushright}
-\titlefont Data Science Project\\
+\titlefont Wine Quality\\
 \subtitlefont Francisco Prado, Vienna 2021
 \end{flushright}
 %\vfill
-\begin{center}
-\begin{tikzpicture}
-\node[scope fading=north, inner sep=0pt, outer sep=0pt]{
- \makebox[\textwidth]{\includegraphics[width=\paperwidth]{figs/mill_amsterdam.jpg}}
-};
-\end{tikzpicture}
-\end{center}
+}
 
+\tikz[remember picture,overlay] \node[scope fading=north, inner sep=0pt, outer sep=0pt] at (current page.center){\includegraphics[width=\paperwidth,height=\paperheight]{figs/mill_amsterdam.jpg}};
+\newpage
+%\clearpage
+
+\thispagestyle{empty}
+
+
+\begin{flushright}
+\titlefont Wine Quality\\
+\subtitlefont Francisco Prado, Vienna 2021
+\end{flushright}
+%\vfill
+
+\tikz[remember picture,overlay] \node[opacity=0.3,inner sep=0pt] at (current page.center){\includegraphics[width=\paperwidth,height=\paperheight]{figs/mill_amsterdam.jpg}};
+\clearpage
+% \tikz[remember picture,overlay] \node[opacity=0.3,inner sep=0pt] at (current page.center){\includegraphics[width=\paperwidth,height=\paperheight]{example-image}};
+%\clearpage
 % for additional pages after the title, uncomment the following line first:
 % \clearpage
 

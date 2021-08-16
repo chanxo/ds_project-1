@@ -5,6 +5,9 @@ import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+# Some inspiration
+# https://medium.com/dataman-in-ai/the-shap-with-more-elegant-charts-bc3e73fa1c0c
+
 ## Referencing folders and data names
 path = os.getcwd()
 # path = os.path.abspath(os.path.join(path, os.pardir))  # when in latex
@@ -99,13 +102,15 @@ y = wine_data['quality']
 seed = 123
 # Splitting data into train/test.
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 X_train, X_test, Y_train, y_test = train_test_split(X, y, test_size=0.20, random_state=seed)
+# Y_test = pd.DataFrame(Y_test, columns=['quality'])
+
 # Converting 1D arrays to dataframe
 y_train = pd.DataFrame(Y_train, columns=['quality'])
-# Y_test = pd.DataFrame(Y_test, columns=['quality'])
 # Scaling training samples
+from sklearn.preprocessing import StandardScaler
+
 train_X_scaler = StandardScaler()
 train_Y_scaler = StandardScaler()
 # we first fit the training data to different scaling objects to keep track of them
@@ -125,9 +130,11 @@ from sklearn.linear_model import LinearRegression as lr
 # We first initialise the model and then fit with the training observations
 normal_lr = lr(fit_intercept=True, normalize=False)
 normal_lr.fit(X=x_train, y=y_train)
-# Predicting values, we first need to transform the X_test matrix using our earlier defined scale
+# Predicting values, we first need to transform the X_test matrix
+# using our earlier defined scale
 nlr_y = normal_lr.predict(train_X_scaler.transform(X_test))
-# Reverting our predicted values to their level using the scale determined from the training sample
+# Reverting our predicted values to their level using the scale determined
+# from the training sample
 nlr_y = train_Y_scaler.inverse_transform(nlr_y)
 nlr_rmse = rmse(y_test, nlr_y, squared=False)
 nrl_mape = mape(y_true=y_test, y_pred=nlr_y)
@@ -136,16 +143,20 @@ results['linear regression'] = [nlr_rmse, nrl_mape, nlr_score]
 model_predictions['linear regression'] = np.ravel(nlr_y)
 
 # Lasso Linear Regression (L1 Norm)
-# we do not standardize here otherwise the lasso regression might turn all coefficients to 0 only to use the intercept.
+# we do not standardize here otherwise the lasso regression might turn
+# all coefficients to 0 only to use the intercept.
 from sklearn.linear_model import Lasso as lasso
 
 # We first initialise the model and then fit with the training observations
-# also do not use intercept, if the intercept is allowed, again makes most of the coefficients to be 0.
+# also do not use intercept, if the intercept is allowed, again makes
+# most of the coefficients to be 0.
 lasso_lr = lasso(fit_intercept=False, normalize=False)
 lasso_lr.fit(X=X_train, y=Y_train)
-# Predicting values, we first need to transform the X_test matrix using our earlier defined scale
+# Predicting values, we first need to transform the X_test matrix using
+# our earlier defined scale
 lassolr_y = lasso_lr.predict(X_test)
-# Reverting our predicted values to their level using the scale determined from the training sample
+# Reverting our predicted values to their level using the scale determined
+# from the training sample
 lassolr_y = train_Y_scaler.inverse_transform(lassolr_y)
 lassolr_rmse = rmse(y_test, lassolr_y, squared=False)
 lassorl_mape = mape(y_true=y_test, y_pred=lassolr_y)
@@ -160,14 +171,17 @@ model_predictions['lasso linear regression'] = np.ravel(lassolr_y)
 from sklearn.neural_network import MLPRegressor
 
 NN_scikit = MLPRegressor(random_state=seed,
-                         max_iter=1000,
-                         hidden_layer_sizes=(22, 22),
+                         max_iter=500,
+                         hidden_layer_sizes=(22,),
                          activation='logistic').fit(x_train, np.ravel(y_train))
 NN_scikit.out_activation_ = 'identity'
-# we use (22,) in the hidden layers to try to capture the features and their interactions, we will do it
-# because it is too little data. This is pushing it a bit, given the small sample size
+# we use (22,) in the hidden layers to try to capture the features and
+# their interactions, we will do it because it is too little data.
+# Using more neurons or hidden layers in this case might induce
+# over-fitting, given the small sample size.
 nn_scikit_y = NN_scikit.predict(train_X_scaler.transform(X_test))
-# Reverting our predicted values to their level using the scale determined from the training sample
+# Reverting our predicted values to their level using the scale determined
+# from the training sample.
 nn_scikit_y = train_Y_scaler.inverse_transform(nn_scikit_y)
 nn_scikit_rmse = rmse(y_test, nn_scikit_y, squared=False)
 nn_scikit_mape = mape(y_true=y_test, y_pred=nn_scikit_y)
@@ -176,9 +190,16 @@ results['NN Scikit'] = [nn_scikit_rmse, nn_scikit_mape, nn_scikit_score]
 model_predictions['NN Scikit'] = np.ravel(nn_scikit_y)
 
 # NN With Keras
-import tensorflow as tf
 from keras.models import Sequential
 from keras.layers import Dense
+import tensorflow as tf
+tf.random.set_seed(seed)
+
+
+def squared_loss(y_true, y_pred):
+    squared_difference = tf.square(y_true - y_pred)
+    return tf.reduce_sum(squared_difference, axis=-1)  # Note the `axis=-1`
+
 
 nn_keras_tf = Sequential()
 nn_keras_tf.add(Dense(22,
@@ -190,8 +211,8 @@ nn_keras_tf.add(Dense(1, activation='linear'))
 # print(dir(tf.keras.optimizers))
 # print(dir(tf.keras.losses))
 # print(dir(tf.keras.metrics))
-nn_keras_tf.compile(loss='MeanSquaredError', optimizer='adam', metrics=['MeanSquaredError'])
-nn_keras_tf.fit(x_train, y_train, epochs=150)
+nn_keras_tf.compile(loss=squared_loss, optimizer='adam')
+nn_keras_tf.fit(x_train, y_train, epochs=500, verbose=0)
 nn_keras_tf_y = train_Y_scaler.inverse_transform(nn_keras_tf.predict(train_X_scaler.transform(X_test)))
 nn_keras_tf_rmse = rmse(y_test, nn_keras_tf_y, squared=False)
 nn_keras_tf_mape = mape(y_true=y_test, y_pred=nn_keras_tf_y)
@@ -238,11 +259,9 @@ plt.show()
 '''
 
 # SVM (Regression)
-
 from sklearn.svm import LinearSVR, SVR
 
-SVR
-svr = LinearSVR(random_state=seed, tol=1e-4, max_iter=10000, loss='squared_epsilon_insensitive')
+# svr = LinearSVR(random_state=seed, tol=1e-4, max_iter=10000, loss='squared_epsilon_insensitive')
 svr = SVR()
 
 svr.fit(x_train, np.ravel(y_train))
@@ -258,6 +277,11 @@ model_predictions['SVR'] = np.ravel(svr_y)
 results_table = pd.DataFrame(results).round(decimals=2).transpose()
 results_table.columns = ['RMSE', 'MAPE', 'Score']
 results_table
+print(results_table.to_latex(index=True, multirow=True,
+                             label='tab:model_results',
+                             caption='Metric comparison different competing models',
+                             position='h!'),
+      file=open(f'{path}/code_python/project1_wine/model_results.tex', "w"))
 
 fig, axes = plt.subplots(4, 2, sharey=True, figsize=(12, 13))
 fig.suptitle('(Normalised) Relative frequency - Comparison train/test/predicted samples', fontsize='xx-large')
@@ -287,23 +311,55 @@ import lime
 
 
 def inverse_transform_shap_values(scaler_x, scaler_y, shap_values_all):
-    # shap_values_all.values = scaler_x.inverse_transform(shap_values_all.values)
+    shap_values_all.data = scaler_x.inverse_transform(shap_values_all.data)
     shap_values_all.base_values = shap_values_all.base_values * scaler_y.scale_ + scaler_y.mean_
-    shap_values_all.values = shap_values_all.values * scaler_y.scale_ + scaler_y.mean_
+    shap_values_all.values = shap_values_all.values * scaler_y.scale_
     return shap_values_all
 
 
 # for normal linear model
-explainer_lr = shap.Explainer(normal_lr, masker=X_test)
-shap_values_lr = explainer_lr(X_test)
-shap_values_lr = inverse_transform_shap_values(train_X_scaler, train_Y_scaler, explainer_lr(X_test))
+explainer_lr = shap.Explainer(normal_lr, masker=train_X_scaler.transform(X_test))
+shap_values_lr = explainer_lr(train_X_scaler.transform(X_test))
+shap_values_lr = inverse_transform_shap_values(train_X_scaler, train_Y_scaler, shap_values_lr)
+
+indices_nlr_upper = np.where(nlr_y > 6.7)
+indices_nlr_lower = np.where(nlr_y < 4.5)
+
+from matplotlib.backends.backend_pdf import PdfPages
+
+fig = plt.figure(figsize=(12, 10))
+plt.title('Waterfall analysis - (normal) linear regression obs. 1')
+pdf = PdfPages(f'{path}/document_files/figs/shape_nlr1.pdf')
+shap.plots.waterfall(shap.Explanation(values=shap_values_lr[11],
+                                      feature_names=X_train.columns.tolist()))
+pdf.savefig(fig, bbox_inches='tight')
+pdf.close()
+plt.show()
+
+fig = plt.figure(figsize=(12, 10))
+plt.title('Waterfall analysis - (normal) linear regression obs. 2')
+pdf = PdfPages(f'{path}/document_files/figs/shape_nlr2.pdf')
+shap.plots.waterfall(shap.Explanation(values=shap_values_lr[37],
+                                      feature_names=X_train.columns.tolist()))
+pdf.savefig(fig, bbox_inches='tight')
+pdf.close()
+plt.show()
+
+fig = plt.figure(figsize=(12, 10))
+plt.title('Waterfall analysis - (normal) linear regression obs. 3')
+pdf = PdfPages(f'{path}/document_files/figs/shape_nlr3.pdf')
+shap.plots.waterfall(shap.Explanation(values=shap_values_lr[247],
+                                      feature_names=X_train.columns.tolist()))
+pdf.savefig(fig, bbox_inches='tight')
+pdf.close()
+plt.show()
 
 # for tree
 explainer_tree = shap.Explainer(tree_model, masker=X_test)
 shap_values_tree = explainer_tree(X_test)
 
 plt.figure(figsize=(12, 10))
-shap.plots.waterfall(shap.Explanation(values=shap_values_lr[0],
+shap.plots.waterfall(shap.Explanation(values=shap_values_tree[0],
                                       feature_names=X_train.columns.tolist()))
 plt.show()
 
@@ -312,3 +368,15 @@ ex = shap.KernelExplainer(tree_model.predict, X_train)
 shap_values = ex.shap_values(X_test.iloc[0, :])
 shap.force_plot(ex.expected_value, shap_values[0], X_test.iloc[0, :])
 plt.show()
+
+fig, (ax0, ax1, ax2) = plt.subplots(3, 1, figsize=(12, 13))
+plt.suptitle('Waterfall analysis - (normal) linear regression')
+pdf = PdfPages(f'{path}/document_files/figs/shape_nlr.pdf')
+axes[0].shap.plots.waterfall(shap.Explanation(values=shap_values_lr[11],
+                                              feature_names=X_train.columns.tolist()))
+axes[1].shap.plots.waterfall(shap.Explanation(values=shap_values_lr[37],
+                                              feature_names=X_train.columns.tolist()))
+axes[2].shap.plots.waterfall(shap.Explanation(values=shap_values_lr[247],
+                                              feature_names=X_train.columns.tolist()))
+pdf.savefig(fig, bbox_inches='tight')
+pdf.close()
