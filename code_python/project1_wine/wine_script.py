@@ -152,12 +152,8 @@ from sklearn.linear_model import Lasso as lasso
 # most of the coefficients to be 0.
 lasso_lr = lasso(fit_intercept=False, normalize=False)
 lasso_lr.fit(X=X_train, y=Y_train)
-# Predicting values, we first need to transform the X_test matrix using
-# our earlier defined scale
 lassolr_y = lasso_lr.predict(X_test)
-# Reverting our predicted values to their level using the scale determined
-# from the training sample
-lassolr_y = train_Y_scaler.inverse_transform(lassolr_y)
+
 lassolr_rmse = rmse(y_test, lassolr_y, squared=False)
 lassorl_mape = mape(y_true=y_test, y_pred=lassolr_y)
 lassolr_score = score(y_true=y_test, y_pred=lassolr_y)
@@ -165,7 +161,6 @@ results['lasso linear regression'] = [lassolr_rmse, lassorl_mape, lassolr_score]
 model_predictions['lasso linear regression'] = np.ravel(lassolr_y)
 # todo here we can see that the lasso rmse is higher than the normal linear regression, to be expected due the
 #  objective function to minimise
-# todo explain that a negative score just means that the particular model is performing quite poorly.
 
 # Neural Network
 from sklearn.neural_network import MLPRegressor
@@ -212,7 +207,7 @@ nn_keras_tf.add(Dense(1, activation='linear'))
 # print(dir(tf.keras.losses))
 # print(dir(tf.keras.metrics))
 nn_keras_tf.compile(loss=squared_loss, optimizer='adam')
-nn_keras_tf.fit(x_train, y_train, epochs=500, verbose=0)
+nn_keras_tf.fit(x_train, y_train, epochs=100, verbose=0)
 nn_keras_tf_y = train_Y_scaler.inverse_transform(nn_keras_tf.predict(train_X_scaler.transform(X_test)))
 nn_keras_tf_rmse = rmse(y_test, nn_keras_tf_y, squared=False)
 nn_keras_tf_mape = mape(y_true=y_test, y_pred=nn_keras_tf_y)
@@ -277,11 +272,11 @@ model_predictions['SVR'] = np.ravel(svr_y)
 results_table = pd.DataFrame(results).round(decimals=2).transpose()
 results_table.columns = ['RMSE', 'MAPE', 'Score']
 results_table
-print(results_table.to_latex(index=True, multirow=True,
-                             label='tab:model_results',
-                             caption='Metric comparison different competing models',
-                             position='h!'),
-      file=open(f'{path}/code_python/project1_wine/model_results.tex', "w"))
+# print(results_table.to_latex(index=True, multirow=True,
+#                              label='tab:model_results',
+#                              caption='Metric comparison different competing models',
+#                              position='h!'),
+#       file=open(f'{path}/code_python/project1_wine/model_results.tex', "w"))
 
 fig, axes = plt.subplots(4, 2, sharey=True, figsize=(12, 13))
 fig.suptitle('(Normalised) Relative frequency - Comparison train/test/predicted samples', fontsize='xx-large')

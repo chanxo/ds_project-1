@@ -220,19 +220,15 @@ nlr_y = train_Y_scaler.inverse_transform(nlr_y)
 # we do not standardize here otherwise the lasso regression might turn
 # all coefficients to 0 only to use the intercept.
 from sklearn.linear_model import Lasso as lasso
-# We first initialise the model and then fit with the training obs.
+
+# We first initialise the model and then fit with the training observations
 # also do not use intercept, if the intercept is allowed, again makes
 # most of the coefficients to be 0.
 lasso_lr = lasso(fit_intercept=False, normalize=False)
 lasso_lr.fit(X=X_train, y=Y_train)
-# Predicting values, we first need to transform the X_test matrix using
-# our earlier defined scale.
 lassolr_y = lasso_lr.predict(X_test)
-# Reverting our predicted values to their level using the scale determined
-# from the training sample.
-lassolr_y = train_Y_scaler.inverse_transform(lassolr_y)
 \end{pyconsole}
-
+\newpage
 \subsection{Neural Networks}\label{subsec:neural-networks}
 
 %! suppress = EscapeUnderscore
@@ -256,7 +252,6 @@ nn_scikit_y = NN_scikit.predict(train_X_scaler.transform(X_test))
 # from the training sample.
 nn_scikit_y = train_Y_scaler.inverse_transform(nn_scikit_y)
 \end{pyverbatim}
-
 
 %! suppress = EscapeUnderscore
 %! suppress = EscapeHashOutsideCommand
@@ -323,19 +318,80 @@ svr_y = train_Y_scaler.inverse_transform(svr.predict(
 Most of the models used in \Cref{sec:analyses} were fitted using \emph{sk-learn} libraries.
 This was done just for ease of quick prototyping and implementation, but for production models, probably
 other libraries would be preferred, if not outright developing some of them from scratch.
-One model, one neural network, was fitted with \emph{keras} to emphasize that the results should be quite
-similar, however not identical\footnote{There are several reasons why almost two identically defined models
-can have different outputs, in particular when it comes to neural networks. Some of these factors are the
+One model, one neural network, was additionally fitted with the \emph{keras} library to emphasize that the results
+should be quite similar, however not identical\footnote{There are several reasons why almost two identically defined
+models can have different outputs, in particular when it comes to neural networks. Some of these factors are the
 solvers used, the number of epochs, learning rate and steps, tolerances and staring points.}.
 
 %\caption{Description of wine characteristics.}
 \input{../code_python/project1_wine/model_results.tex}
 %\label{tab:model_results}
 
+\Cref{tab:model_results} shows the results of different loss functions and score for the different competing models.
+Let us quickly define each of the metrics.
+
+\begin{equation}
+  \mathrm{RMSE} = \sum_{i=1}^{d}
+  \left(\frac{y_{i}-\hat{y}_{i}}{y_{i}}
+  \right)^2.
+\label{eq:rmse}
+\end{equation}
+
+\begin{equation}
+  \mathrm{MAPE} = \sum_{i=1}^{d}
+  \left|\frac{y_{i}-\hat{y}_{i}}{y_{i}}
+  \right| \cdot 100\%.
+\label{eq:mape}
+\end{equation}
+
+\begin{equation}
+  \mathrm{Score} = 1 - \frac{\sum_{i=1}^{d}(y_{i}-\hat{y}_{i})^2}{\sum_{i=1}^{d}(y_{i}-\bar{y})^2}.
+\label{eq:score}
+\end{equation}
+
+Where $y_{i}$ is the true $i^{\text{th}}$ observation in the test sample, $\hat{y}_{i}$ is the forecasted
+$i^{\text{th}}$ observation and $\bar{y}$ denotes the average value of the test sample.
+
+After observing the values in \cref{tab:model_results}, one can see a clear winner in terms of the loss
+metrics, i.e.\ the SVR model which has the lowest RMSE and MAPE out of the competing models as well as
+the largest Score out of the models in scope.
+
+Another fact we can observe is that the MAPE is $0.1$ for most of the models, although this is just due the
+rounding of results to 2 decimal places.
+
+Also, if we compared the two more classic regressions: Linear regression, and the \emph{lasso} regression,
+we find that it would seem the latter to be of inferior performance than the former.
+This was to be expected, given that the \emph{lasso} regression penalises the amount of regressors when
+more systematic error could still be extracted by using more regressors.\ By the same token, the \emph{lasso}
+regression looks to find a sparser model, which is useful when one tries to make sense of a model with fewer
+variables, and hence easier to control for and to explain.
+
+When comparing the neural network models, we can observe that both models perform quite similarly.
+They do not output exactly the same results even when trying to match their parametrisation and hyper-parameters,
+as one can observe in \cref{subsec:neural-networks}.
+This is also to be expected from models like neural networks, since they are initialised (pseudo)randomly, hence
+the (stochastic) gradient descent algorithm can output widely different results with the same inputs, just by
+factors like starting points (in particular when the starting points are \emph{close} in \emph{input space} to a
+local minimum) and initial shuffling of the sub-samples to initialise the algorithm.
+
 
 
 
 \section{Discussion}\label{sec:discussion}
+
+So far, we have covered quantitatively the results in terms of the loss metrics.
+If we had stopped here, then we should conclude that the SVR model was superior to the rest
+and therefore use this model in the future.
+
+Let us have a look at the distribution of the predictions of each model and compare them to the
+distributions
+
+% todo describe the distributions and add the (probability) histograms
+
+% todo make a SHAP analysis on one of the models
+
+% todo explain how to bypass the issue of the distribution tails when forecasting on new data either ensamble models or local approximations.
+
 
 {\color{red}\textbf{[1]}} All these characteristics are important in a wine.
 We used all these statistical models to try to understand to which degree they are important
@@ -343,6 +399,7 @@ to determine a wine`s quality.
 These analyses might be really important for a winemaker to know.
 Given that by affecting the inherent characteristics of the wine will most likely have an
 impact on the quality of that wine.
+
 
 
 \begin{thebibliography}{1}
