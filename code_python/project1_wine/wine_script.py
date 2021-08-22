@@ -274,7 +274,7 @@ results_table.columns = ['RMSE', 'MAPE', 'Score']
 results_table
 # print(results_table.to_latex(index=True, multirow=True,
 #                              label='tab:model_results',
-#                              caption='Metric comparison different competing models',
+#                              caption='Metric comparison different competing models.',
 #                              position='h!'),
 #       file=open(f'{path}/code_python/project1_wine/model_results.tex', "w"))
 

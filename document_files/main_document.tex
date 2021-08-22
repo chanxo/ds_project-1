@@ -462,7 +462,7 @@ the pH being the same for both observations provides a different contribution to
 This shows us that the SVR model picks more subtleties in the underlying data and not just linear terms.
 
 The latter fact has certain pros and cons.
-For example, picking up relationships that are not just linear might uncover certain relationship amongst the features,
+For example, picking up relationships that are not just linear might uncover certain links amongst the features,
 providing a better view on possible positive or negative synergies in the underlying characteristics of the wine.
 As a con, the researcher could not know \emph{ad priori} whether similar characteristics would output similar grades.
 \begin{figure}[h!]
@@ -473,21 +473,51 @@ As a con, the researcher could not know \emph{ad priori} whether similar charact
 \end{figure}
 
 
-
-
-
 \subsection{Retro-feedback}\label{subsec:retro-feedback}
+
+So far we have looked at different models and tried to analyse which model performs better than the others.
+We defined that if we were using only the loss metrics as the indicator for better performance, then the SVR model
+would be a clear winner.
+
+However, after checking the prediction distributions in \cref{fig:prediction_hists}, we became uncertain on whether a
+model like SVR or linear regression could provide us with a reliable mechanism to predict quality grades that are on the
+tail of initial quality distribution in the training sample.
+Moreover, the waterfall analysis displayed in \cref{fig:shap_svr}, showed us that the pH feature contributed in different
+magnitude for the same pH value.
+
+\vspace{1pt}
+
+What we have encountered thus far are the typical problems a researcher/data scientist has when trying to develop models
+for predicting pretty much anything.
 
 \subsection{Decision}\label{subsec:decision}
 
-\subsection{Further improvements research}\label{subsec:further-improvements-research}
+For what is next, we will only continue the analysis and predictions of the two models: (normal) linear regression
+(linear regression from now on), and the SVR model.
+
+Even though we could continue with the other 4 models, we will focus only on the two mentioned models for the sake of
+simplicity.
+In particular given that the SVR model was the winner by loss metrics and because the ease of interpretation of the
+linear model.
+
+
 
 \part{Calibrating phase} \label{part:calibrating}
 
+\section{Outlines}\label{sec:outlines}
+
+% todo pre-processing by clustering, then fit models based on cluster to get more granularity of less frequent grades
+
+\section{Clustering}\label{sec:clustering}
+
+\subsection{Checking clusters}\label{subsec:checking-clusters}
+
+\subsection{Calibrating models}\label{subsec:calibrating-models}
+
+
 \part{Experimental phase} \label{part:experimenting}
 
-
-% todo make a SHAP analysis on one of the models -> SVR and linear model
+\section{Simulation study}\label{sec:simulation-study}
 
 % todo explain how to bypass the issue of the distribution tails when forecasting on new data either ensamble models or local approximations.
 
@@ -495,6 +525,8 @@ As a con, the researcher could not know \emph{ad priori} whether similar charact
 
 % todo how to add value -> add noise in many directions to obsevations caring not to overstep boundaries for certain variables like pH and make a consensus with the models
 % to see whether it is possible to find some 'key' characteristics that make a good wine.
+
+\part{Wrapping up, conclusions} \label{part:conclusions}
 
 
 %{\color{red}\textbf{[1]}}
