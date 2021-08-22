@@ -43,7 +43,7 @@
 
 \tableofcontents\newpage
 
-\part{Wine quality} \label{part:wine}
+\part{Learning phase} \label{part:learning}
 
 \section{Introduction}\label{sec:introduction}
 In the paragraphs to come we will discuss different approaches and models to be used in the dataset used in~\cite{wine}.
@@ -89,6 +89,7 @@ This should give us a general idea of how and if the variables are related to on
 
 
 \begin{figure}[h!]
+    \centering
     \includegraphics[width=0.9\textwidth]{figs/wine_heatmap}
     \caption{Correlation structure of wine characteristics.}
     \label{fig:wine_heatmap}
@@ -121,6 +122,7 @@ I.e., the tails of the quality (grades 3 and 8) will be underrepresented, then m
 of fitting will have trouble predicting a grade close to 3 and 8 and beyond (to each direction).
 
 \begin{figure}[h!]
+    \centering
     \includegraphics[width=0.9\textwidth]{figs/wine_kde}
     \caption{KDEs for wine features.}
     \label{fig:wine_kdes}
@@ -380,25 +382,130 @@ local minimum) and initial shuffling of the sub-samples to initialise the algori
 \section{Discussion}\label{sec:discussion}
 
 So far, we have covered quantitatively the results in terms of the loss metrics.
-If we had stopped here, then we should conclude that the SVR model was superior to the rest
-and therefore use this model in the future.
+If we had stopped here, then we should have concluded that the SVR model was superior to the rest of the models,
+and therefore we should use this model in the future.
 
+However, as it was hinted in \cref{sec:exploratory-analysis}, it would be probably wise to investigate the distribution
+of the predictions.
+This should give us a better picture of the \emph{output space} the models are able to map/span.
 Let us have a look at the distribution of the predictions of each model and compare them to the
-distributions
+distributions. \Cref{fig:prediction_hists} shows the different histograms with the relative frequency of the
+predictions (the relative frequency histograms for the train/test sample are in read for easier identification).
 
-% todo describe the distributions and add the (probability) histograms
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/prediction_histograms}
+    \caption{Relative frequency histograms for train/test and predicted samples.}
+    \label{fig:prediction_hists}
+\end{figure}
 
-% todo make a SHAP analysis on one of the models
+As we can observe in \cref{fig:prediction_hists}, both train and test sample seem to be quite similar in terms
+of distribution, meaning the distribution of the train sample represents well (in relative terms) the test one.
+This means that a model that is fitted with the train data should be able to output more or less similarly values
+in the same distribution.
+
+From the distribution of the train and test sample one can clearly observe a bimodal pattern with a slight
+biased towards the higher quality grades.
+When it comes to the models' predictions we see some major differences in the outline (density) shape.
+Most models have a single mode, except for the predictions obtained with the regression tree, where it somewhat
+unclear given the clusters.
+The fact of that most distributions are unimodal is understandable.
+Given that both modes in the original samples are in the consecutive grades (in an ordinal classification scale), and
+that the models output continuum values.
+This can be observed in most models having their mode at about the value $5.5$.
+
+If we go back to the initial winner model (SVR), we can see that the outline does not represent well the test sample
+distribution, it does however pick even the slight bias towards lower grades of the training sample.
+In fact, the distribution of the predictions coming from the SVR model has a bias towards lower grades, in particular
+the grade 5, which tells that the model fitted quite well the distribution of the training sample and new data even
+with high grades is not able to offset this initial fit.
+
+Nevertheless, we see that most, if not all the models' predictions seem to be around the values $5-6$.
+So let us explore what happens in the \emph{tail} grades (either very low or very high grades).
+
+\subsection{Explanability} \label{subsec:explanability}
+
+Let us analyse the SHAP (Shapley Additive Explanations) waterfall fo(r a few of the \emph{tail} predictions of two
+different models: normal linear regression (see \cref{subsec:linear-regression}, \cref{fig:shap_nlr}) and SVR
+(see \cref{subsec:support-vector-regression-(svr)}, \cref{fig:shap_svr}).
+
+The following graphical analyses show the additive contribution of the features in a model to each prediction, starting
+from a base prediction (\emph{average}) to the particular prediction.
+
+\subsubsection{Linear regression}\label{subsubsec:linear-regression}
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/shape_nlr}
+    \caption{(SHAP) Waterfall analysis of predictions - Normal linear regression (two similar predictions).}
+    \label{fig:shap_nlr}
+\end{figure}
+
+If we analysed \cref{fig:shap_nlr}, we can see the both observations (predictions) 12 and 248 using the normal
+linear model output a very similar value: $6.766$ and $6.777$, respectively.
+If we looked in more detail we see that for similar values of several variables (alcohol, volatile acidity,
+total sulfur dioxide, sulphates and chlorides) their contributions stay consistent.
+This more or less tells the reader that two similar observations (wine features) would produce a similar
+prediction, which is good if we are trying to build a robust model.
+
+If for example, we pay close attention to the density of the wine we can see that for these two predictions, even having
+similar density values, their contribution to the grade (quality) changes in sign, which suggests us that given our model
+a value in between $0.998$ and $0.994$ is the threshold for a zero contribution to a better/lower grade (meaning that
+a density value below this threshold would increase the quality of the wine, the inverse being also true), all else being
+equal (\emph{ceteris paribus}).
+
+\subsubsection{SVR}
+
+If we observe now the winning model (see \cref{fig:shap_svr}), we can say similar things as we said for the linear model in
+\cref{subsubsec:linear-regression} in terms of the consistency of the individual contributions.
+Although, for this model, we can note one large difference that does not occur for the linear model, i.e., that
+the pH being the same for both observations provides a different contribution towards the particular prediction.
+This shows us that the SVR model picks more subtleties in the underlying data and not just linear terms.
+
+The latter fact has certain pros and cons.
+For example, picking up relationships that are not just linear might uncover certain relationship amongst the features,
+providing a better view on possible positive or negative synergies in the underlying characteristics of the wine.
+As a con, the researcher could not know \emph{ad priori} whether similar characteristics would output similar grades.
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figs/shape_svr}
+    \caption{(SHAP) Waterfall analysis of predictions - Support vector regression (two similar predictions).}
+    \label{fig:shap_svr}
+\end{figure}
+
+
+
+
+
+\subsection{Retro-feedback}\label{subsec:retro-feedback}
+
+\subsection{Decision}\label{subsec:decision}
+
+\subsection{Further improvements research}\label{subsec:further-improvements-research}
+
+\part{Calibrating phase} \label{part:calibrating}
+
+\part{Experimental phase} \label{part:experimenting}
+
+
+% todo make a SHAP analysis on one of the models -> SVR and linear model
 
 % todo explain how to bypass the issue of the distribution tails when forecasting on new data either ensamble models or local approximations.
 
+% todo implement a solution for this issue, first clustering observation features, then fitting multiple models depending on which clusters provide a better fit.
 
-{\color{red}\textbf{[1]}} All these characteristics are important in a wine.
+% todo how to add value -> add noise in many directions to obsevations caring not to overstep boundaries for certain variables like pH and make a consensus with the models
+% to see whether it is possible to find some 'key' characteristics that make a good wine.
+
+
+%{\color{red}\textbf{[1]}}
+All these characteristics are important in a wine.
 We used all these statistical models to try to understand to which degree they are important
 to determine a wine`s quality.
 These analyses might be really important for a winemaker to know.
 Given that by affecting the inherent characteristics of the wine will most likely have an
 impact on the quality of that wine.
+
+
 
 
 
@@ -408,6 +515,7 @@ In Decision Support Systems, Elsevier, 47(4):547-553},  2009.
 \end{thebibliography}
 
 
+\clearpage
 \begin{sidewaystable}
     \centering
     \caption{Description of wine characteristics.}

@@ -296,6 +296,7 @@ for column_i in model_predictions.columns:
     if r_count > 3:
         break
 fig.subplots_adjust(hspace=0.4)
+# plt.savefig(f'{path}/document_files/figs/prediction_histograms.pdf', format='pdf', bbox_inches='tight')
 plt.show()
 
 # SHAP and LIME analysis
@@ -322,34 +323,96 @@ indices_nlr_lower = np.where(nlr_y < 4.5)
 
 from matplotlib.backends.backend_pdf import PdfPages
 
+# Observations 11 and 247 are quite similar
 fig = plt.figure(figsize=(12, 10))
-plt.title('Waterfall analysis - (normal) linear regression obs. 1')
-pdf = PdfPages(f'{path}/document_files/figs/shape_nlr1.pdf')
+pdf = PdfPages(f'{path}/document_files/figs/shape_nlr.pdf')
+ax1 = fig.add_subplot(211)
+ax1.set_title('Waterfall analysis - (normal) linear regression obs. 12')
 shap.plots.waterfall(shap.Explanation(values=shap_values_lr[11],
-                                      feature_names=X_train.columns.tolist()))
-pdf.savefig(fig, bbox_inches='tight')
-pdf.close()
-plt.show()
-
-fig = plt.figure(figsize=(12, 10))
-plt.title('Waterfall analysis - (normal) linear regression obs. 2')
-pdf = PdfPages(f'{path}/document_files/figs/shape_nlr2.pdf')
-shap.plots.waterfall(shap.Explanation(values=shap_values_lr[37],
-                                      feature_names=X_train.columns.tolist()))
-pdf.savefig(fig, bbox_inches='tight')
-pdf.close()
-plt.show()
-
-fig = plt.figure(figsize=(12, 10))
-plt.title('Waterfall analysis - (normal) linear regression obs. 3')
-pdf = PdfPages(f'{path}/document_files/figs/shape_nlr3.pdf')
+                                      feature_names=X_train.columns.tolist()), show=False)
+ax2 = fig.add_subplot(212)
+ax2.set_title('Waterfall analysis - (normal) linear regression obs. 248')
 shap.plots.waterfall(shap.Explanation(values=shap_values_lr[247],
-                                      feature_names=X_train.columns.tolist()))
+                                      feature_names=X_train.columns.tolist()), show=False)
+
+fig.subplots_adjust(hspace=0.6)
 pdf.savefig(fig, bbox_inches='tight')
 pdf.close()
 plt.show()
 
-# for tree
+
+# SVR
+explainer_svr = shap.Explainer(svr.predict, masker=train_X_scaler.transform(X_test))
+shap_values_svr = explainer_svr(train_X_scaler.transform(X_test))
+shap_values_svr = inverse_transform_shap_values(train_X_scaler, train_Y_scaler, shap_values_svr)
+
+indices_svr_upper = np.where(svr_y > 6.7)
+indices_svr_lower = np.where(svr_y < 4.5)
+
+# 11 and 64 are most similar observations
+fig = plt.figure(figsize=(12, 10))
+pdf = PdfPages(f'{path}/document_files/figs/shape_svr.pdf')
+ax1 = fig.add_subplot(211)
+ax1.set_title('Waterfall analysis - support vector regression obs. 12')
+shap.plots.waterfall(shap.Explanation(values=shap_values_svr[11],
+                                      feature_names=X_train.columns.tolist()), show=False)
+ax2 = fig.add_subplot(212)
+ax2.set_title('Waterfall analysis - support vector regression obs. 65')
+shap.plots.waterfall(shap.Explanation(values=shap_values_svr[64],
+                                      feature_names=X_train.columns.tolist()), show=False)
+
+fig.subplots_adjust(hspace=0.6)
+pdf.savefig(fig, bbox_inches='tight')
+pdf.close()
+plt.show()
+
+
+# new linear regression
+
+from sklearn.linear_model import LinearRegression as lr
+
+# We first initialise the model and then fit with the training observations
+normal_lr2 = lr(fit_intercept=True, normalize=False)
+normal_lr2.fit(X=X_train, y=Y_train)
+# Predicting values, we first need to transform the X_test matrix
+# using our earlier defined scale
+nlr2_y = normal_lr2.predict(X_test)
+# Reverting our predicted values to their level using the scale determined
+# from the training sample
+nlr2_rmse = rmse(y_test, nlr2_y, squared=False)
+nrl2_mape = mape(y_true=y_test, y_pred=nlr2_y)
+nlr2_score = score(y_true=y_test, y_pred=nlr2_y)
+results['linear regression'] = [nlr2_rmse, nrl2_mape, nlr2_score]
+model_predictions['linear regression 2'] = np.ravel(nlr2_y)
+
+fig = plt.figure(figsize=(12, 10))
+sns.histplot(nlr2_y, kde=True, stat="probability")
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Below here needs testing
+
 explainer_tree = shap.Explainer(tree_model, masker=X_test)
 shap_values_tree = explainer_tree(X_test)
 
