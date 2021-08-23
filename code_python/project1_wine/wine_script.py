@@ -367,6 +367,53 @@ pdf.close()
 plt.show()
 
 
+## Part 2 - Learning
+# Clustering
+
+from sklearn.cluster import KMeans
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # new linear regression
 
 from sklearn.linear_model import LinearRegression as lr

@@ -39,11 +39,11 @@
 % Document
 \begin{document}
 
-\includepdf[pages={2}]{src/titlepage.pdf}
+\includepdf[pages={4}]{src/titlepage.pdf}
 
 \tableofcontents\newpage
 
-\part{Learning phase} \label{part:learning}
+\part{Initialising phase} \label{part:initialising}
 
 \section{Introduction}\label{sec:introduction}
 In the paragraphs to come we will discuss different approaches and models to be used in the dataset used in~\cite{wine}.
@@ -502,9 +502,17 @@ linear model.
 
 
 
-\part{Calibrating phase} \label{part:calibrating}
+\part{Learning phase} \label{part:learning}
 
 \section{Outlines}\label{sec:outlines}
+
+Personally, after seeing the results we obtained in \cref{part:initialising} there are a few things that I believe should
+be addressed.
+In particular, things related to improving the forecasts on the tails quality grades.
+To do this I thought of using a pipeline, i.e.,\ to first cluster the wine features to ideally find clusters
+that resemble or map particular grades (this should be performed only on the training sample to avoid hindsight);
+and later fit models (both linear and SVR) for each or for a group of clusters, to increase representativeness of the
+higher and lower grades in relation to the other grades.
 
 % todo pre-processing by clustering, then fit models based on cluster to get more granularity of less frequent grades
 

@@ -10,6 +10,7 @@
 \usepackage{xcolor}
 \usepackage{color}
 \usetikzlibrary{fadings}
+\usepackage[absolute,overlay]{textpos}
 % https://tex.stackexchange.com/questions/167719/how-to-use-background-image-in-latex
 
 \begin{document}
@@ -49,5 +50,50 @@
 %\clearpage
 % for additional pages after the title, uncomment the following line first:
 % \clearpage
+
+
+\begin{flushright}
+\titlefont Wine Quality\\
+\subtitlefont Francisco Prado Moreno, Vienna 2021
+\end{flushright}
+%\vfill
+
+\tikz[remember picture,overlay] \node[opacity=0.3,inner sep=0pt] at (current page.center){\includegraphics[width=\paperwidth,height=\paperheight]{figs/patterns.jpg}};
+\clearpage
+
+\begin{flushright}
+\titlefont Wine Quality\\
+\subtitlefont Francisco Prado Moreno, Vienna 2021
+\end{flushright}
+%\vfill
+
+%\begin{textblock*}{10cm}(9cm,20cm) % {block width} (coords)
+%\begin{flushright}
+%\titlefont Wine Quality\\
+%\subtitlefont Francisco Prado Moreno, Vienna 2021
+%\end{flushright}
+%\end{textblock*}
+
+\tikz[remember picture,overlay] \node[opacity=0.3,inner sep=0pt] at (current page.center){\includegraphics[width=\paperwidth,height=\paperheight]{figs/shapes.jpg}};
+
+%{\textblockcolour{white}
+%\begin{textblock*}{10cm}(9cm,20cm) % {block width} (coords)
+%hhgdhasdkjashdkjhasddasjhdjkashdkhkjsdhkasjhdkjashkdjhaskjdhksjadhkasjhdkjashdkjasdhkjash\\
+%    fdsfhsdjkf
+%    \vspace{1cm}
+%    diasdljaskldjkasjdlkjsalkjd
+%\end{textblock*}}
+\clearpage
+
+
+\begin{flushright}
+\titlefont Wine Quality\\
+\subtitlefont Francisco Prado Moreno, Vienna 2021
+\end{flushright}
+%\vfill
+
+\tikz[remember picture,overlay] \node[opacity=0.6,inner sep=0pt] at (current page.center){\includegraphics[width=\paperwidth,height=\paperheight]{figs/abstract.jpg}};
+\clearpage
+
 
 \end{document}
