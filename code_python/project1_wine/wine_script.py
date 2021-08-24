@@ -167,7 +167,7 @@ from sklearn.neural_network import MLPRegressor
 
 NN_scikit = MLPRegressor(random_state=seed,
                          max_iter=500,
-                         hidden_layer_sizes=(22,),
+                         hidden_layer_sizes=(12, 12*11,),
                          activation='logistic').fit(x_train, np.ravel(y_train))
 NN_scikit.out_activation_ = 'identity'
 # we use (22,) in the hidden layers to try to capture the features and
@@ -197,8 +197,11 @@ def squared_loss(y_true, y_pred):
 
 
 nn_keras_tf = Sequential()
-nn_keras_tf.add(Dense(22,
+nn_keras_tf.add(Dense(12,
                       input_dim=11,  # expects 11 inputs
+                      activation='sigmoid'))
+nn_keras_tf.add(Dense((12*11),
+                      input_dim=11,  # expects 22 inputs
                       activation='sigmoid'))
 nn_keras_tf.add(Dense(1, activation='linear'))
 # since we are using keras to call TF we need to compile the model we designed in keras
@@ -207,7 +210,7 @@ nn_keras_tf.add(Dense(1, activation='linear'))
 # print(dir(tf.keras.losses))
 # print(dir(tf.keras.metrics))
 nn_keras_tf.compile(loss=squared_loss, optimizer='adam')
-nn_keras_tf.fit(x_train, y_train, epochs=100, verbose=0)
+nn_keras_tf.fit(x_train, y_train, epochs=500, verbose=0)
 nn_keras_tf_y = train_Y_scaler.inverse_transform(nn_keras_tf.predict(train_X_scaler.transform(X_test)))
 nn_keras_tf_rmse = rmse(y_test, nn_keras_tf_y, squared=False)
 nn_keras_tf_mape = mape(y_true=y_test, y_pred=nn_keras_tf_y)
@@ -287,7 +290,7 @@ sns.histplot(x=y_test, ax=axes[0, 1], kde=True, stat="probability", color='red')
 r_count = 1
 col_count = 0
 for column_i in model_predictions.columns:
-    axes[r_count, col_count].set_title(f'{column_i} predicted Quality')
+    axes[r_count, col_count].set_title(f'{column_i} predicted quality')
     sns.histplot(data=model_predictions, x=column_i, ax=axes[r_count, col_count], kde=True, stat="probability")
     col_count += 1
     if col_count == 2:
@@ -372,116 +375,114 @@ plt.show()
 
 from sklearn.cluster import KMeans
 
+kmeans_kwargs = {'init': 'random', 'n_init': 10, 'max_iter': 500, 'random_state': seed}
 
+sse = []
+log_sse = []
+sse_scaled = []
+log_sse_scaled = []
 
+max_clusters = 12
 
+for cluster_n in range(2, max_clusters):
+    kmeans_model = KMeans(n_clusters=cluster_n, **kmeans_kwargs)
+    kmeans_model_scaled = KMeans(n_clusters=cluster_n, **kmeans_kwargs)
+    # for the clustering we do not use the quality, since we will not know this ad priori
+    kmeans_model.fit(X_train)  # initial dataset
+    kmeans_model_scaled.fit(x_train)  # scaled dataset
+    sse.append(kmeans_model.inertia_)
+    sse_scaled.append(kmeans_model_scaled.inertia_)
+    log_sse.append(np.log10(kmeans_model.inertia_))
+    log_sse_scaled.append(np.log10(kmeans_model_scaled.inertia_))
 
+sse_dict = {0: sse, 1: sse_scaled, 2: log_sse, 3: log_sse_scaled}
+sse_names_dict = {0: 'SSE', 1: 'SSE (scaled features)', 2: 'log SSE', 3: 'log SSE (scaled features)'}
 
+# Elbow method visual
+plt.style.use('fivethirtyeight')
+fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+fig.suptitle('Elbow method SSE and log SSE', fontsize='xx-large')
+r_count = 0
+col_count = 0
+for sse_results in range(len(sse_dict)):
+    axes[r_count, col_count].plot(range(2, max_clusters), sse_dict[sse_results])
+    axes[r_count, col_count].set_xticks(range(2, max_clusters))
+    axes[r_count, col_count].set_xlabel('Number of clusters')
+    axes[r_count, col_count].set_ylabel(sse_names_dict[sse_results])
+    r_count += 1
+    if r_count > 1:
+        col_count += 1
+        r_count = 0
+plt.tight_layout()
+# plt.savefig(f'{path}/document_files/figs/n_clusters_elbow.pdf', format='pdf', bbox_inches='tight')
+plt.show()
 
+plt.style.use('default')
 
+# let us use 5 clusters
+kmeans_model = KMeans(n_clusters=11, **kmeans_kwargs)
+kmeans_model.fit(X_train)
+kmeans_model_clusters = kmeans_model.labels_
 
+# let us do a PCA analysis to try and plot the clusters in the PCs
+from sklearn.decomposition import PCA
 
+pca_init = PCA(n_components=6)
+pca_model = pca_init.fit(x_train)
+pca_x_train = pd.DataFrame(pca_model.transform(x_train))
+pca_x_train.columns = ['PC 1', 'PC 2', 'PC 3', 'PC 4', 'PC 5', 'PC 6']
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# new linear regression
-
-from sklearn.linear_model import LinearRegression as lr
-
-# We first initialise the model and then fit with the training observations
-normal_lr2 = lr(fit_intercept=True, normalize=False)
-normal_lr2.fit(X=X_train, y=Y_train)
-# Predicting values, we first need to transform the X_test matrix
-# using our earlier defined scale
-nlr2_y = normal_lr2.predict(X_test)
-# Reverting our predicted values to their level using the scale determined
-# from the training sample
-nlr2_rmse = rmse(y_test, nlr2_y, squared=False)
-nrl2_mape = mape(y_true=y_test, y_pred=nlr2_y)
-nlr2_score = score(y_true=y_test, y_pred=nlr2_y)
-results['linear regression'] = [nlr2_rmse, nrl2_mape, nlr2_score]
-model_predictions['linear regression 2'] = np.ravel(nlr2_y)
-
-fig = plt.figure(figsize=(12, 10))
-sns.histplot(nlr2_y, kde=True, stat="probability")
+# let us check the % of the variance we can get by using x PCs
+PCs = range(1, pca_model.n_components_+1)
+PCs_var = 100*pca_model.explained_variance_ratio_
+PCs_cum_var = np.cumsum(PCs_var).round(2)
+# fig = plt.figure(figsize=(12, 10))
+fig, ax1 = plt.subplots(figsize=(9, 6))
+fig.suptitle('PC and their explained variance')
+# left y-axis
+ax1.set_xlabel('Principal Components')
+ax1.bar(PCs, PCs_var, color='tab:blue')
+ax1.set_ylabel('Variance %')
+ax1.set_xticks(PCs)
+# right y-axis
+ax2 = ax1.twinx()
+ax2.set_ylabel('Cumulated variance %')
+ax2.plot(PCs, PCs_cum_var, color='black')
+# for index, value in enumerate(PCs_cum_var):
+#     ax2.annotate(str(value), xy=(index+1, value), xytext=(index+1, value), textcoords='offset pixels')
+plt.tight_layout()
 plt.show()
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Below here needs testing
-
-explainer_tree = shap.Explainer(tree_model, masker=X_test)
-shap_values_tree = explainer_tree(X_test)
-
-plt.figure(figsize=(12, 10))
-shap.plots.waterfall(shap.Explanation(values=shap_values_tree[0],
-                                      feature_names=X_train.columns.tolist()))
+fig = plt.figure(figsize=(9, 6))
+plt.scatter(pca_x_train['PC 1'], pca_x_train['PC 2'], c=kmeans_model_clusters)
+plt.tight_layout()
 plt.show()
 
-shap.initjs()
-ex = shap.KernelExplainer(tree_model.predict, X_train)
-shap_values = ex.shap_values(X_test.iloc[0, :])
-shap.force_plot(ex.expected_value, shap_values[0], X_test.iloc[0, :])
-plt.show()
 
-fig, (ax0, ax1, ax2) = plt.subplots(3, 1, figsize=(12, 13))
-plt.suptitle('Waterfall analysis - (normal) linear regression')
-pdf = PdfPages(f'{path}/document_files/figs/shape_nlr.pdf')
-axes[0].shap.plots.waterfall(shap.Explanation(values=shap_values_lr[11],
-                                              feature_names=X_train.columns.tolist()))
-axes[1].shap.plots.waterfall(shap.Explanation(values=shap_values_lr[37],
-                                              feature_names=X_train.columns.tolist()))
-axes[2].shap.plots.waterfall(shap.Explanation(values=shap_values_lr[247],
-                                              feature_names=X_train.columns.tolist()))
-pdf.savefig(fig, bbox_inches='tight')
-pdf.close()
+clusters_df = pd.DataFrame(kmeans_model_clusters, index=X_train.index, columns=['Cluster'])
+cluster_and_quality = clusters_df.join(Y_train)
+high_grades = cluster_and_quality.iloc[np.where(cluster_and_quality['quality']>6)]
+low_grades = cluster_and_quality.iloc[np.where(cluster_and_quality['quality']<5)]
+
+# this is not necessarily working as I expected
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
