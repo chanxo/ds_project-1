@@ -36,10 +36,22 @@
 % for future projects
 % \usepackage[usefamily=juliacon]{pythontex}
 
+% insert blank / empty page without numbering
+\usepackage{afterpage}
+\newcommand\myemptypage{
+    \null
+    \thispagestyle{empty}
+    \mbox{This page was intentionally left blank.}
+    \addtocounter{page}{-1}
+    \newpage
+    }
+
 % Document
 \begin{document}
 
 \includepdf[pages={4}]{src/titlepage.pdf}
+
+\myemptypage
 
 \tableofcontents\newpage
 

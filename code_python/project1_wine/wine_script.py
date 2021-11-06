@@ -167,7 +167,7 @@ from sklearn.neural_network import MLPRegressor
 
 NN_scikit = MLPRegressor(random_state=seed,
                          max_iter=500,
-                         hidden_layer_sizes=(12, 12*11,),
+                         hidden_layer_sizes=(12, 12 * 11,),
                          activation='logistic').fit(x_train, np.ravel(y_train))
 NN_scikit.out_activation_ = 'identity'
 # we use (22,) in the hidden layers to try to capture the features and
@@ -188,6 +188,7 @@ model_predictions['NN Scikit'] = np.ravel(nn_scikit_y)
 from keras.models import Sequential
 from keras.layers import Dense
 import tensorflow as tf
+
 tf.random.set_seed(seed)
 
 
@@ -200,7 +201,7 @@ nn_keras_tf = Sequential()
 nn_keras_tf.add(Dense(12,
                       input_dim=11,  # expects 11 inputs
                       activation='sigmoid'))
-nn_keras_tf.add(Dense((12*11),
+nn_keras_tf.add(Dense((12 * 11),
                       input_dim=11,  # expects 22 inputs
                       activation='sigmoid'))
 nn_keras_tf.add(Dense(1, activation='linear'))
@@ -240,21 +241,21 @@ results['Regression Tree'] = [tree_rmse, tree_mape, tree_score]
 model_predictions['Regression Tree'] = np.ravel(tree_y)
 
 # problem with the visualisation
-'''plt.figure(figsize=(12, 10))
-tree_viz = tree.export_graphviz(tree_model, out_file=None,
-                                feature_names=features[0:10],
-                                class_names=features[11],
-                                filled=True, rounded=True,
-                                special_characters=True)
-tree_graph = graphviz.Source(tree_viz)
-# tree_graph.render('wine_data')
-tree_graph
-plt.show()
+# plt.figure(figsize=(12, 10))
+# tree_viz = tree.export_graphviz(tree_model, out_file=None,
+#                                 feature_names=features[0:10],
+#                                 class_names=features[11],
+#                                 filled=True, rounded=True,
+#                                 special_characters=True)
+# tree_graph = graphviz.Source(tree_viz)
+# # tree_graph.render('wine_data')
+# tree_graph
+# plt.show()
+#
+# plt.figure(figsize=(12, 10))
+# tree.plot_tree(tree_model)
+# plt.show()
 
-plt.figure(figsize=(12, 10))
-tree.plot_tree(tree_model)
-plt.show()
-'''
 
 # SVM (Regression)
 from sklearn.svm import LinearSVR, SVR
@@ -343,7 +344,6 @@ pdf.savefig(fig, bbox_inches='tight')
 pdf.close()
 plt.show()
 
-
 # SVR
 explainer_svr = shap.Explainer(svr.predict, masker=train_X_scaler.transform(X_test))
 shap_values_svr = explainer_svr(train_X_scaler.transform(X_test))
@@ -368,7 +368,6 @@ fig.subplots_adjust(hspace=0.6)
 pdf.savefig(fig, bbox_inches='tight')
 pdf.close()
 plt.show()
-
 
 ## Part 2 - Learning
 # Clustering
@@ -433,8 +432,8 @@ pca_x_train = pd.DataFrame(pca_model.transform(x_train))
 pca_x_train.columns = ['PC 1', 'PC 2', 'PC 3', 'PC 4', 'PC 5', 'PC 6']
 
 # let us check the % of the variance we can get by using x PCs
-PCs = range(1, pca_model.n_components_+1)
-PCs_var = 100*pca_model.explained_variance_ratio_
+PCs = range(1, pca_model.n_components_ + 1)
+PCs_var = 100 * pca_model.explained_variance_ratio_
 PCs_cum_var = np.cumsum(PCs_var).round(2)
 # fig = plt.figure(figsize=(12, 10))
 fig, ax1 = plt.subplots(figsize=(9, 6))
@@ -453,20 +452,123 @@ ax2.plot(PCs, PCs_cum_var, color='black')
 plt.tight_layout()
 plt.show()
 
-
 fig = plt.figure(figsize=(9, 6))
 plt.scatter(pca_x_train['PC 1'], pca_x_train['PC 2'], c=kmeans_model_clusters)
 plt.tight_layout()
 plt.show()
 
-
 clusters_df = pd.DataFrame(kmeans_model_clusters, index=X_train.index, columns=['Cluster'])
 cluster_and_quality = clusters_df.join(Y_train)
-high_grades = cluster_and_quality.iloc[np.where(cluster_and_quality['quality']>6)]
-low_grades = cluster_and_quality.iloc[np.where(cluster_and_quality['quality']<5)]
+high_grades = cluster_and_quality.iloc[np.where(cluster_and_quality['quality'] > 6)]
+low_grades = cluster_and_quality.iloc[np.where(cluster_and_quality['quality'] < 5)]
 
 # this is not necessarily working as I expected
 
+# --------------------------------------------------------------------------------------------------------------
+
+
+# Linear Regression
+# Normal Linear Regression (L2 Norm)
+from sklearn.linear_model import LinearRegression as lr
+
+normal_lr = lr(fit_intercept=True, normalize=False)
+normal_lr.fit(X=x_train, y=y_train)
+nlr_y = normal_lr.predict(train_X_scaler.transform(X_train))
+nlr_y = train_Y_scaler.inverse_transform(nlr_y)
+nlr_y_test = normal_lr.predict(train_X_scaler.transform(X_test))
+nlr_y_test = train_Y_scaler.inverse_transform(nlr_y_test)
+
+# lower and higher grades
+low_grades_lr = np.where(nlr_y < 5.1)
+len(low_grades_lr[0])
+high_grades_lr = np.where(6.1 < nlr_y)
+len(high_grades_lr[0])
+
+# estimating a model for the lower grades
+normal_lr_low2 = lr(fit_intercept=True, normalize=False)
+normal_lr_low2.fit(X=x_train[low_grades_lr[0]], y=y_train[low_grades_lr[0]])
+
+# predicting the values in the sample using the initial prediction as initial step
+low_test_grades_lr = np.where(nlr_y_test < 5.1)
+y_low_nlr = normal_lr_low2.predict(train_X_scaler.transform(X_test.iloc[low_test_grades_lr[0]]))
+y_low_nlr = train_Y_scaler.inverse_transform(y_low_nlr)
+
+
+
+
+# plotting comparison
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 6))
+fig.suptitle('(Normalised) Relative frequency - Comparison test/predicted samples', fontsize='xx-large')
+ax1.set_title('Quality in predicted sample')
+# sns.histplot(x=y_low_nlr, ax=ax1, kde=True, stat="probability", color='red')
+sns.histplot(x=y_test.iloc[low_test_grades_lr[0]], ax=ax1, kde=True, stat="probability", color='red')
+ax2.set_title('Quality in test sample')
+sns.histplot(x=y_test.iloc[low_test_grades_lr[0]], ax=ax2, kde=True, stat="probability", color='red')
+plt.tight_layout()
+plt.show()
+
+
+len(low_grades_lr[0])/len(nlr_y)
+len(high_grades_lr[0])/len(nlr_y)
+
+
+# Gaussian Mixtures
+from sklearn.mixture import GaussianMixture
+
+gmix_model = GaussianMixture(n_components=3)
+gmix_model.fit(X=X_train, y=Y_train)
+gmix_y = gmix_model.predict(X_test)
+gmix_clusters_train = gmix_model.predict(X_train)
+
+
+fig = plt.figure(figsize=(9, 6))
+plt.scatter(pca_x_train['PC 2'], pca_x_train['PC 4'], c=gmix_clusters_train)
+plt.tight_layout()
+plt.show()
+
+# Residual plot linear model
+residuals = np.ravel(Y_train) - np.ravel(nlr_y)
+fig = plt.figure(figsize=(9, 6))
+plt.scatter(x=list(range(1, len(residuals)+1)), y=residuals.T)
+plt.tight_layout()
+plt.show()
+
+
+
+# Multinomial Logistic regression
+
+from sklearn.linear_model import LogisticRegression
+
+# log_reg_model = LogisticRegression(solver='newton-cg').fit(X=X_train, y=Y_train)
+# log_reg_model = LogisticRegression(multi_class='ovr', solver='newton-cg').fit(X=X_train, y=Y_train)
+log_reg_model = LogisticRegression(multi_class='multinomial',
+                                   max_iter=10000,
+                                   solver='saga',
+                                   penalty='elasticnet',
+                                   l1_ratio=1).fit(X=X_train, y=Y_train)
+
+log_reg_y = log_reg_model.predict(X_test)
+
+log_rmse = rmse(y_test, log_reg_y, squared=False)
+log_mape = mape(y_true=y_test, y_pred=log_reg_y)
+log_score = score(y_true=y_test, y_pred=log_reg_y)
+results['multinomial logistic regression'] = [log_rmse, log_mape, log_score]
+model_predictions['multinomial logistic regression'] = np.ravel(log_reg_y)
+
+results_table = pd.DataFrame(results).round(decimals=2).transpose()
+results_table.columns = ['RMSE', 'MAPE', 'Score']
+results_table
+
+# plotting comparison
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 6))
+fig.suptitle('(Normalised) Relative frequency - Comparison test/predicted samples', fontsize='xx-large')
+ax1.set_title('Quality in predicted sample')
+# sns.histplot(x=y_low_nlr, ax=ax1, kde=True, stat="probability", color='red')
+sns.histplot(x=log_reg_y, ax=ax1, kde=True, stat="probability", color='blue')
+ax2.set_title('Quality in test sample')
+sns.histplot(x=y_test, ax=ax2, kde=True, stat="probability", color='red')
+plt.tight_layout()
+plt.show()
 
 
 
@@ -485,4 +587,59 @@ low_grades = cluster_and_quality.iloc[np.where(cluster_and_quality['quality']<5)
 
 
 
+# plotting comparison
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 6))
+fig.suptitle('(Normalised) Relative frequency - Comparison test/predicted samples', fontsize='xx-large')
+ax1.set_title('Quality in predicted sample - Gaussian mixture model')
+sns.histplot(x=gmix_y, ax=ax1, kde=True, stat="probability", color='red')
+ax2.set_title('Quality in test sample')
+sns.histplot(x=y_test, ax=ax2, kde=True, stat="probability", color='red')
+plt.tight_layout()
+plt.show()
 
+
+
+# Let us try with splitting the full sample into train, test, validation
+
+X_train, X_test, Y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=seed)
+X_test, X_val, Y_test, Y_val = train_test_split(X_test, y_test, test_size=0.4, random_state=seed)
+# this makes train 50%, test 30% and validation 20%
+# Y_test = pd.DataFrame(Y_test, columns=['quality'])
+
+# Converting 1D arrays to dataframe
+y_train = pd.DataFrame(Y_train, columns=['quality'])
+# Scaling training samples
+from sklearn.preprocessing import StandardScaler
+
+train_X_scaler = StandardScaler()
+train_Y_scaler = StandardScaler()
+# we first fit the training data to different scaling objects to keep track of them
+train_X_scaler.fit(X_train)
+train_Y_scaler.fit(y_train)
+x_train = train_X_scaler.transform(X_train)
+y_train = train_Y_scaler.transform(y_train)
+
+# Linear regression
+from sklearn.linear_model import LinearRegression as lr
+
+# We first initialise the model and then fit with the training observations
+normal_lr = lr(fit_intercept=True, normalize=False)
+normal_lr.fit(X=x_train, y=y_train)
+# Predicting values, we first need to transform the X_test matrix
+# using our earlier defined scale
+nlr_y = normal_lr.predict(train_X_scaler.transform(X_test))
+# Reverting our predicted values to their level using the scale determined
+# from the training sample
+nlr_y = train_Y_scaler.inverse_transform(nlr_y)
+
+
+
+from sklearn.linear_model import TweedieRegressor
+
+GLM = TweedieRegressor().fit(X=x_train, y=Y_train)
+glm_y = GLM.predict(train_X_scaler.transform(X_test))
+glm_rmse = rmse(y_test, glm_y, squared=False)
+glm_mape = mape(y_true=y_test, y_pred=glm_y)
+glm_score = score(y_true=y_test, y_pred=glm_y)
+results['(generalized) linear model'] = [glm_rmse, glm_mape, glm_score]
+model_predictions['(generalized) linear model'] = np.ravel(glm_y)
